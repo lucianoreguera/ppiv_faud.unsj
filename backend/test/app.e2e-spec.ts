@@ -5,9 +5,15 @@ import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('Repositorio FAUD-UNSJ — Fase 0 & Fase 1 (e2e)', () => {
+describe('Repositorio FAUD-UNSJ — Fases 0, 1 y 2 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+
+  const testUserEmail = 'alumno.prueba.fase2@jachal.gov.ar';
+  let jachalDepartamentoId: string;
+  let registeredUserId: string;
+  let adminAccessToken: string;
+  let studentAccessToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -21,14 +27,27 @@ describe('Repositorio FAUD-UNSJ — Fase 0 & Fase 1 (e2e)', () => {
         whitelist: true,
         forbidNonWhitelisted: true,
         transform: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
       }),
     );
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
+
+    // Limpieza previa por si una corrida anterior dejó el usuario de prueba
+    await prisma.usuario.deleteMany({
+      where: { email: testUserEmail },
+    });
   });
 
   afterAll(async () => {
+    if (prisma) {
+      await prisma.usuario.deleteMany({
+        where: { email: testUserEmail },
+      });
+    }
     await app.close();
   });
 
@@ -112,6 +131,182 @@ describe('Repositorio FAUD-UNSJ — Fase 0 & Fase 1 (e2e)', () => {
           'Diseño bioclimático en zonas áridas',
         ]),
       );
+    });
+  });
+
+  describe('Fase 2 — Departamentos, Autenticación JWT y Gestión/Validación de Usuarios (RF05)', () => {
+    it('GET /api/v1/departamentos debe devolver los 19 departamentos con Capital primero y métricas asociadas', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/departamentos')
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(19);
+      expect(response.body[0].nombre).toBe('Capital');
+      expect(response.body[0].esCapital).toBe(true);
+
+      const jachal = response.body.find(
+        (d: { nombre: string }) => d.nombre === 'Jáchal',
+      );
+      expect(jachal).toBeDefined();
+      expect(jachal.esCapital).toBe(false);
+      jachalDepartamentoId = jachal.id;
+    });
+
+    it('GET /api/v1/departamentos/metricas debe devolver el consolidado territorial (Capital vs. 18 departamentos)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/departamentos/metricas')
+        .expect(200);
+
+      expect(response.body.totalDepartamentos).toBe(19);
+      expect(response.body.usuariosCapital).toBeGreaterThanOrEqual(1);
+      expect(response.body.usuariosDepartamentosAlejados).toBeGreaterThanOrEqual(
+        5,
+      );
+      expect(response.body.departamentos).toHaveLength(19);
+    });
+
+    it('POST /api/v1/auth/register debe registrar un nuevo estudiante de Jáchal en estado PENDIENTE', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          nombre: 'Ramiro Quiroga',
+          email: testUserEmail,
+          password: 'AlumnoTest123!',
+          departamentoId: jachalDepartamentoId,
+        })
+        .expect(201);
+
+      expect(response.body.message).toContain('PENDIENTE');
+      expect(response.body.usuario).toEqual(
+        expect.objectContaining({
+          nombre: 'Ramiro Quiroga',
+          email: testUserEmail,
+          rol: RolUsuario.USUARIO,
+          estadoValidacion: EstadoValidacionUsuario.PENDIENTE,
+          departamentoId: jachalDepartamentoId,
+        }),
+      );
+      expect(response.body.usuario.passwordHash).toBeUndefined();
+      registeredUserId = response.body.usuario.id;
+    });
+
+    it('POST /api/v1/auth/register debe rechazar con 409 Conflict un correo electrónico duplicado', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          nombre: 'Ramiro Duplicado',
+          email: testUserEmail,
+          password: 'AlumnoTest123!',
+          departamentoId: jachalDepartamentoId,
+        })
+        .expect(409);
+    });
+
+    it('POST /api/v1/auth/login debe bloquear con 403 Forbidden el inicio de sesión de un usuario PENDIENTE', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: testUserEmail,
+          password: 'AlumnoTest123!',
+        })
+        .expect(403);
+
+      expect(response.body.message).toContain('PENDIENTE');
+    });
+
+    it('POST /api/v1/auth/login debe autenticar al Administrador de Biblioteca y emitir un JWT válido', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'admin@faud.unsj.edu.ar',
+          password: 'Admin123!',
+        })
+        .expect(200);
+
+      expect(response.body.accessToken).toBeDefined();
+      expect(response.body.tokenType).toBe('Bearer');
+      expect(response.body.usuario.rol).toBe(RolUsuario.ADMINISTRADOR);
+      adminAccessToken = response.body.accessToken;
+    });
+
+    it('GET /api/v1/usuarios debe permitir al Admin listar los usuarios pendientes y obtener contadores de pestañas', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/usuarios')
+        .query({ estado: EstadoValidacionUsuario.PENDIENTE })
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      expect(response.body.contadores).toEqual(
+        expect.objectContaining({
+          todos: expect.any(Number),
+          pendientes: expect.any(Number),
+          aprobados: expect.any(Number),
+          rechazados: expect.any(Number),
+        }),
+      );
+      expect(response.body.contadores.pendientes).toBeGreaterThanOrEqual(4);
+
+      const encontrado = response.body.items.find(
+        (u: { id: string }) => u.id === registeredUserId,
+      );
+      expect(encontrado).toBeDefined();
+      expect(encontrado.departamento.nombre).toBe('Jáchal');
+    });
+
+    it('PATCH /api/v1/usuarios/:id/estado debe permitir al Admin aprobar la cuenta del estudiante de Jáchal', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/usuarios/${registeredUserId}/estado`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .send({
+          estado: EstadoValidacionUsuario.APROBADO,
+          motivo: 'Alumno regular validado por Biblioteca FAUD-UNSJ.',
+        })
+        .expect(200);
+
+      expect(response.body.estadoAnterior).toBe(
+        EstadoValidacionUsuario.PENDIENTE,
+      );
+      expect(response.body.estadoActual).toBe(EstadoValidacionUsuario.APROBADO);
+      expect(response.body.usuario.estadoValidacion).toBe(
+        EstadoValidacionUsuario.APROBADO,
+      );
+    });
+
+    it('POST /api/v1/auth/login debe permitir iniciar sesión al estudiante tras ser APROBADO por Biblioteca', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: testUserEmail,
+          password: 'AlumnoTest123!',
+        })
+        .expect(200);
+
+      expect(response.body.accessToken).toBeDefined();
+      expect(response.body.usuario.estadoValidacion).toBe(
+        EstadoValidacionUsuario.APROBADO,
+      );
+      expect(response.body.usuario.departamento.nombre).toBe('Jáchal');
+      studentAccessToken = response.body.accessToken;
+    });
+
+    it('GET /api/v1/auth/profile debe retornar el perfil del estudiante autenticado con su JWT', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/auth/profile')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(200);
+
+      expect(response.body.id).toBe(registeredUserId);
+      expect(response.body.email).toBe(testUserEmail);
+      expect(response.body.rol).toBe(RolUsuario.USUARIO);
+      expect(response.body.departamento.nombre).toBe('Jáchal');
+    });
+
+    it('GET /api/v1/usuarios debe rechazar con 403 Forbidden el acceso de un usuario con rol USUARIO', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/usuarios')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(403);
     });
   });
 });
