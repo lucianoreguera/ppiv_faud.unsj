@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  EstadoPrestamo,
   EstadoValidacionUsuario,
   RolUsuario,
   TipoDocumento,
@@ -10,7 +11,7 @@ import { AppModule } from './../src/app.module';
 import { PdfStorageService } from './../src/catalog/pdf-storage.service';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
+describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -19,7 +20,13 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
   let registeredUserId: string;
   let adminAccessToken: string;
   let studentAccessToken: string;
+  let anaAccessToken: string;
   let createdDocumentId: string;
+  let seedDocumentId: string;
+  let studentLoanId: string;
+  let studentLoanDrmToken: string;
+  let anaLoanId: string;
+  let anaLoanDrmToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,7 +49,14 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
 
     prisma = app.get<PrismaService>(PrismaService);
 
-    // Limpieza previa por si una corrida anterior dejó el usuario de prueba
+    // Limpieza previa por si una corrida anterior dejó datos de prueba
+    await prisma.prestamo.deleteMany({
+      where: {
+        usuario: {
+          email: { in: [testUserEmail, 'ana.perez@jachal.gov.ar'] },
+        },
+      },
+    });
     await prisma.usuario.deleteMany({
       where: { email: testUserEmail },
     });
@@ -50,6 +64,13 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
 
   afterAll(async () => {
     if (prisma) {
+      await prisma.prestamo.deleteMany({
+        where: {
+          usuario: {
+            email: { in: [testUserEmail, 'ana.perez@jachal.gov.ar'] },
+          },
+        },
+      });
       await prisma.usuario.deleteMany({
         where: { email: testUserEmail },
       });
@@ -501,6 +522,215 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
       await request(app.getHttpServer())
         .get(`/api/v1/documentos/${createdDocumentId}`)
         .expect(404);
+    });
+  });
+
+  describe('Fase 4 — Módulo de Préstamos, Máquina de Estados y DRM Temporal de 7 Días (RF03, RF04, RNF02)', () => {
+    beforeAll(async () => {
+      const docVivienda = await prisma.documento.findFirst({
+        where: { titulo: 'Vivienda social en Cuyo' },
+      });
+      expect(docVivienda).toBeDefined();
+      seedDocumentId = docVivienda!.id;
+    });
+
+    it('POST /api/v1/prestamos debe otorgar un préstamo ACTIVO por 7 días corridos, firmar el tokenAcceso DRM y construir la marca de agua', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .send({
+          documentoId: seedDocumentId,
+        })
+        .expect(201);
+
+      expect(response.body.tokenAcceso).toBeDefined();
+      expect(response.body.expiresInDays).toBe(7);
+      expect(response.body.marcaAgua).toContain('Ramiro Quiroga · Préstamo #');
+      expect(response.body.drm).toEqual(
+        expect.objectContaining({
+          permitirDescarga: false,
+          permitirImpresion: false,
+          permitirCopia: false,
+          duracionMaximaDias: 7,
+        }),
+      );
+      expect(response.body.prestamo).toEqual(
+        expect.objectContaining({
+          estado: EstadoPrestamo.ACTIVO,
+          vigente: true,
+          diasRestantes: 7,
+          porVencer24h: false,
+        }),
+      );
+
+      studentLoanId = response.body.prestamo.id;
+      studentLoanDrmToken = response.body.tokenAcceso;
+    });
+
+    it('POST /api/v1/prestamos debe bloquear con 409 Conflict si el mismo usuario solicita un segundo préstamo ACTIVO sobre el mismo documento', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .send({
+          documentoId: seedDocumentId,
+        })
+        .expect(409);
+    });
+
+    it('POST /api/v1/prestamos debe permitir préstamos simultáneos multiusuario a otro estudiante sobre el mismo documento (Spec 03)', async () => {
+      const loginAna = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'ana.perez@jachal.gov.ar',
+          password: 'Alumno123!',
+        })
+        .expect(200);
+
+      anaAccessToken = loginAna.body.accessToken;
+
+      const loanAna = await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${anaAccessToken}`)
+        .send({
+          documentoId: seedDocumentId,
+        })
+        .expect(201);
+
+      expect(loanAna.body.prestamo.estado).toBe(EstadoPrestamo.ACTIVO);
+      expect(loanAna.body.marcaAgua).toContain('Ana Pérez · Préstamo #');
+      anaLoanId = loanAna.body.prestamo.id;
+      anaLoanDrmToken = loanAna.body.tokenAcceso;
+    });
+
+    it('GET /api/v1/prestamos/mis-prestamos debe listar los préstamos del estudiante con días restantes y contadores (Figma pág. 13)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/prestamos/mis-prestamos')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(200);
+
+      expect(response.body.contadores).toEqual(
+        expect.objectContaining({
+          todos: 1,
+          activos: 1,
+          porVencer24h: 0,
+          vencidos: 0,
+          revocados: 0,
+        }),
+      );
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.items[0].id).toBe(studentLoanId);
+      expect(response.body.items[0].tokenAcceso).toBe(studentLoanDrmToken);
+    });
+
+    it('GET /api/v1/documentos/:id/ver (Camino alt 1 Figura 3) debe permitir visualizar el stream PDF con token DRM vigente e incluir encabezados de marca de agua (200 OK)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${seedDocumentId}/ver`)
+        .set('Authorization', `Bearer ${studentLoanDrmToken}`)
+        .buffer(true)
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+
+      expect(response.headers['content-type']).toContain('application/pdf');
+      expect(response.headers['content-disposition']).toContain('inline');
+      expect(response.headers['cache-control']).toContain('no-store');
+      expect(response.headers['x-drm-loan-id']).toBe(studentLoanId);
+      expect(response.headers['x-drm-watermark']).toContain('Ramiro Quiroga');
+      expect(response.headers['x-drm-allow-download']).toBe('false');
+      expect(response.headers['x-drm-allow-print']).toBe('false');
+
+      const pdfBuffer = response.body as Buffer;
+      expect(pdfBuffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('GET /api/v1/prestamos/:id/visor debe retornar los metadatos completos para el Visor Protegido (Figma pág. 14)', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/prestamos/${studentLoanId}/visor`)
+        .set('Authorization', `Bearer ${studentLoanDrmToken}`)
+        .expect(200);
+
+      expect(response.body.prestamoId).toBe(studentLoanId);
+      expect(response.body.estado).toBe(EstadoPrestamo.ACTIVO);
+      expect(response.body.marcaAgua).toContain('Ramiro Quiroga · Préstamo #');
+      expect(response.body.drm.permitirDescarga).toBe(false);
+      expect(response.body.documento.titulo).toBe('Vivienda social en Cuyo');
+    });
+
+    it('GET /api/v1/prestamos debe permitir al Administrador consultar el Tablero de Control con métricas operativas (Figma pág. 9)', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      expect(response.body.metricas).toEqual(
+        expect.objectContaining({
+          activos: expect.any(Number),
+          porVencer24h: expect.any(Number),
+          vencidosHoy: expect.any(Number),
+          vencidosTotal: expect.any(Number),
+          revocadosTotal: expect.any(Number),
+          totalHistorico: expect.any(Number),
+        }),
+      );
+      expect(response.body.metricas.activos).toBeGreaterThanOrEqual(2);
+      expect(response.body.items.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('PATCH /api/v1/prestamos/:id/revocar (Camino alt 2 Figura 3) debe revocar manualmente el préstamo y bloquear en el acto el visor PDF con 403 Forbidden aunque el JWT no haya expirado', async () => {
+      const revokeResponse = await request(app.getHttpServer())
+        .patch(`/api/v1/prestamos/${studentLoanId}/revocar`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .send({
+          motivo:
+            'Revocación manual por Biblioteca para prueba de corte inmediato de acceso DRM.',
+        })
+        .expect(200);
+
+      expect(revokeResponse.body.estadoAnterior).toBe(EstadoPrestamo.ACTIVO);
+      expect(revokeResponse.body.estadoActual).toBe(EstadoPrestamo.REVOCADO);
+
+      // Intentamos acceder al documento con el mismo JWT DRM que aún tiene 7 días de validez criptográfica
+      const blockedView = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${seedDocumentId}/ver`)
+        .set('Authorization', `Bearer ${studentLoanDrmToken}`)
+        .expect(403);
+
+      expect(blockedView.body.message).toContain(
+        'El préstamo ha vencido o fue revocado',
+      );
+
+      // También debe bloquear el endpoint /prestamos/:id/contenido
+      await request(app.getHttpServer())
+        .get(`/api/v1/prestamos/${studentLoanId}/contenido`)
+        .set('Authorization', `Bearer ${studentLoanDrmToken}`)
+        .expect(403);
+    });
+
+    it('Expiración de 7 días (Camino alt 3 Figura 3): debe transicionar automáticamente a VENCIDO y bloquear la visualización con 403 Forbidden', async () => {
+      // Simulamos que el préstamo de Ana Pérez cumplió los 7 días hace 1 hora
+      await prisma.prestamo.update({
+        where: { id: anaLoanId },
+        data: {
+          fechaVencimiento: new Date(Date.now() - 3600 * 1000),
+        },
+      });
+
+      const expiredView = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${seedDocumentId}/ver`)
+        .set('Authorization', `Bearer ${anaLoanDrmToken}`)
+        .expect(403);
+
+      expect(expiredView.body.message).toContain(
+        'El préstamo ha vencido o fue revocado',
+      );
+
+      const updatedLoan = await prisma.prestamo.findUnique({
+        where: { id: anaLoanId },
+      });
+      expect(updatedLoan?.estado).toBe(EstadoPrestamo.VENCIDO);
     });
   });
 });

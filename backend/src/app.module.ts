@@ -6,6 +6,7 @@ import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { DepartmentsModule } from './departments/departments.module';
 import { HealthModule } from './health/health.module';
+import { LoansModule } from './loans/loans.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     CatalogModule,
+    LoansModule,
   ],
 })
 export class AppModule {}
