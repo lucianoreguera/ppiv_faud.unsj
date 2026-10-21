@@ -1,0 +1,137 @@
+// ==============================================================================
+// Sistema de Préstamo Digital Interdepartamental — Repositorio FAUD-UNSJ
+// Esquema Relacional Prisma ORM (PostgreSQL 16)
+// Alineado con Diagrama de Clases (Fig. 2), DER (Fig. 8) y Prototipos Figma
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RolUsuario {
+  USUARIO
+  ADMINISTRADOR
+}
+
+enum EstadoValidacionUsuario {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum TipoDocumento {
+  TESIS
+  MONOGRAFIA
+  INVESTIGACION
+  OTROS
+}
+
+enum EstadoPrestamo {
+  SOLICITADO
+  ACTIVO
+  RECHAZADO
+  VENCIDO
+  REVOCADO
+  CERRADO
+}
+
+enum TipoNotificacion {
+  CUENTA_APROBADA
+  PRESTAMO_OTORGADO
+  PROXIMO_VENCIMIENTO_24H
+  PRESTAMO_VENCIDO
+  PRESTAMO_REVOCADO
+}
+
+model Departamento {
+  id         String      @id @default(uuid()) @db.Uuid
+  nombre     String      @unique
+  esCapital  Boolean     @default(false) @map("es_capital")
+  usuarios   Usuario[]
+  documentos Documento[]
+
+  @@map("departamentos")
+}
+
+model Usuario {
+  id               String                  @id @default(uuid()) @db.Uuid
+  nombre           String
+  email            String                  @unique
+  passwordHash     String                  @map("password_hash")
+  rol              RolUsuario              @default(USUARIO)
+  estadoValidacion EstadoValidacionUsuario @default(PENDIENTE) @map("estado_validacion")
+  departamentoId   String                  @map("departamento_id") @db.Uuid
+  departamento     Departamento            @relation(fields: [departamentoId], references: [id])
+  prestamos        Prestamo[]
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  @@index([departamentoId])
+  @@index([estadoValidacion])
+  @@map("usuarios")
+}
+
+model Documento {
+  id                   String        @id @default(uuid()) @db.Uuid
+  titulo               String
+  autor                String
+  director             String?
+  carrera              String        // Ej: Arquitectura, Diseño, Urbanismo
+  tipo                 TipoDocumento
+  anio                 Int
+  resumen              String        @db.Text
+  palabrasClave        String[]      @map("palabras_clave")
+  archivoUrl           String        @map("archivo_url")
+  disponible           Boolean       @default(true)
+  departamentoOrigenId String?       @map("departamento_origen_id") @db.Uuid
+  departamentoOrigen   Departamento? @relation(fields: [departamentoOrigenId], references: [id])
+  prestamos            Prestamo[]
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@index([tipo])
+  @@index([carrera])
+  @@index([anio])
+  @@index([disponible])
+  @@map("documentos")
+}
+
+model Prestamo {
+  id               String         @id @default(uuid()) @db.Uuid
+  codigoReferencia Int            @default(autoincrement()) @map("codigo_referencia") // Ej: Préstamo #1024 para marca de agua
+  usuarioId        String         @map("usuario_id") @db.Uuid
+  documentoId      String         @map("documento_id") @db.Uuid
+  fechaInicio      DateTime       @default(now()) @map("fecha_inicio")
+  fechaVencimiento DateTime       @map("fecha_vencimiento")
+  estado           EstadoPrestamo @default(SOLICITADO)
+  tokenAcceso      String?        @map("token_acceso") @db.Text
+  usuario          Usuario        @relation(fields: [usuarioId], references: [id])
+  documento        Documento      @relation(fields: [documentoId], references: [id])
+  notificaciones   Notificacion[]
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([usuarioId])
+  @@index([documentoId])
+  @@index([estado])
+  @@index([fechaVencimiento])
+  @@map("prestamos")
+}
+
+model Notificacion {
+  id         String           @id @default(uuid()) @db.Uuid
+  prestamoId String           @map("prestamo_id") @db.Uuid
+  tipo       TipoNotificacion
+  mensaje    String?
+  fechaEnvio DateTime         @default(now()) @map("fecha_envio")
+  leida      Boolean          @default(false)
+  prestamo   Prestamo         @relation(fields: [prestamoId], references: [id], onDelete: Cascade)
+
+  @@index([prestamoId])
+  @@map("notificaciones")
+}
