@@ -145,10 +145,7 @@ export class AuthService {
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
-    const expiresIn = this.configService.get<string>(
-      'auth.jwtExpiresIn',
-      '8h',
-    );
+    const expiresIn = this.configService.get<string>('auth.jwtExpiresIn', '8h');
 
     return {
       accessToken,

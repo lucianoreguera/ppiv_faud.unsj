@@ -37,7 +37,8 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({
-    summary: 'Registrar un nuevo usuario departamental (estado inicial PENDIENTE)',
+    summary:
+      'Registrar un nuevo usuario departamental (estado inicial PENDIENTE)',
     description:
       'Crea una cuenta de usuario asociada a uno de los 19 departamentos de San Juan (RF05). La contraseña se almacena hasheada con bcrypt y la cuenta nace en estado `PENDIENTE` hasta que un Administrador de Biblioteca la apruebe.',
   })

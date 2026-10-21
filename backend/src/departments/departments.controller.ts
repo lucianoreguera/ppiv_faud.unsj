@@ -24,7 +24,8 @@ export class DepartmentsController {
       'Endpoint público utilizado en el formulario de registro de usuarios (RF05), en los filtros territoriales del catálogo público (RF02) y en las estadísticas de alcance interdepartamental.',
   })
   @ApiOkResponse({
-    description: 'Listado de los 19 departamentos de San Juan con sus métricas.',
+    description:
+      'Listado de los 19 departamentos de San Juan con sus métricas.',
     type: [DepartmentResponseDto],
   })
   async findAll(): Promise<DepartmentResponseDto[]> {
@@ -33,7 +34,8 @@ export class DepartmentsController {
 
   @Get('metricas')
   @ApiOperation({
-    summary: 'Obtener métricas de distribución territorial (Capital vs. Interior)',
+    summary:
+      'Obtener métricas de distribución territorial (Capital vs. Interior)',
     description:
       'Consolida el alcance interdepartamental del repositorio diferenciando usuarios de Capital (`esCapital = true`) frente a los 18 departamentos restantes de San Juan.',
   })

@@ -1,11 +1,16 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoValidacionUsuario, RolUsuario } from '@prisma/client';
+import {
+  EstadoValidacionUsuario,
+  RolUsuario,
+  TipoDocumento,
+} from '@prisma/client';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { PdfStorageService } from './../src/catalog/pdf-storage.service';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('Repositorio FAUD-UNSJ — Fases 0, 1 y 2 (e2e)', () => {
+describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2 y 3 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -14,6 +19,7 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1 y 2 (e2e)', () => {
   let registeredUserId: string;
   let adminAccessToken: string;
   let studentAccessToken: string;
+  let createdDocumentId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -160,9 +166,9 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1 y 2 (e2e)', () => {
 
       expect(response.body.totalDepartamentos).toBe(19);
       expect(response.body.usuariosCapital).toBeGreaterThanOrEqual(1);
-      expect(response.body.usuariosDepartamentosAlejados).toBeGreaterThanOrEqual(
-        5,
-      );
+      expect(
+        response.body.usuariosDepartamentosAlejados,
+      ).toBeGreaterThanOrEqual(5);
       expect(response.body.departamentos).toHaveLength(19);
     });
 
@@ -307,6 +313,194 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1 y 2 (e2e)', () => {
         .get('/api/v1/usuarios')
         .set('Authorization', `Bearer ${studentAccessToken}`)
         .expect(403);
+    });
+  });
+
+  describe('Fase 3 — Módulo de Catálogo y Almacenamiento Seguro de PDFs (RF01, RF02)', () => {
+    it('GET /api/v1/documentos debe permitir búsqueda pública paginada sin exponer archivoUrl', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/documentos')
+        .expect(200);
+
+      expect(response.body.meta).toEqual(
+        expect.objectContaining({
+          total: expect.any(Number),
+          page: 1,
+          limit: 12,
+          totalPages: expect.any(Number),
+        }),
+      );
+      expect(response.body.items.length).toBeGreaterThanOrEqual(4);
+      expect(response.body.items[0].archivoUrl).toBeUndefined();
+      expect(response.body.items[0].estaDisponible).toBeDefined();
+    });
+
+    it('GET /api/v1/documentos debe filtrar combinadamente por departamentoId, texto (q), carrera y rango de años', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/documentos')
+        .query({
+          q: 'Vivienda',
+          departamentoId: jachalDepartamentoId,
+          carrera: 'Arquitectura',
+          tipo: TipoDocumento.INVESTIGACION,
+          anioDesde: 2020,
+          anioHasta: 2023,
+          disponible: true,
+        })
+        .expect(200);
+
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.items[0].titulo).toBe('Vivienda social en Cuyo');
+      expect(response.body.items[0].departamentoOrigen.nombre).toBe('Jáchal');
+    });
+
+    it('POST /api/v1/documentos debe rechazar con 403 Forbidden el intento de carga de un estudiante (rol USUARIO)', async () => {
+      const pdfBuffer = PdfStorageService.buildSamplePdfBuffer(
+        'Intento No Autorizado',
+        'Alumno',
+        2025,
+      );
+
+      await request(app.getHttpServer())
+        .post('/api/v1/documentos')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .field('titulo', 'Intento No Autorizado')
+        .field('autor', 'Ramiro Quiroga')
+        .field('carrera', 'Arquitectura')
+        .field('tipo', TipoDocumento.TESIS)
+        .field('anio', '2025')
+        .field('resumen', 'Intento de subida sin rol administrador.')
+        .field('palabrasClave', 'prueba, seguridad')
+        .attach('archivo', pdfBuffer, {
+          filename: 'intento.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(403);
+    });
+
+    it('POST /api/v1/documentos debe rechazar con 400 Bad Request un archivo que no sea PDF real (%PDF-)', async () => {
+      const fakePdfBuffer = Buffer.from(
+        'Contenido de texto plano disfrazado de PDF',
+      );
+
+      await request(app.getHttpServer())
+        .post('/api/v1/documentos')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .field('titulo', 'Archivo Inválido')
+        .field('autor', 'Admin')
+        .field('carrera', 'Arquitectura')
+        .field('tipo', TipoDocumento.MONOGRAFIA)
+        .field('anio', '2025')
+        .field('resumen', 'Prueba de validación de magic bytes de PDF.')
+        .field('palabrasClave', 'seguridad, validacion')
+        .attach('archivo', fakePdfBuffer, {
+          filename: 'falso.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(400);
+    });
+
+    it('POST /api/v1/documentos debe permitir al Administrador catalogar un documento con archivo PDF privado', async () => {
+      const validPdfBuffer = PdfStorageService.buildSamplePdfBuffer(
+        'Patrimonio vernáculo en Jáchal',
+        'Arq. Lucía Paredes',
+        2025,
+      );
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/documentos')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .field('titulo', 'Patrimonio vernáculo en Jáchal')
+        .field('autor', 'Arq. Lucía Paredes')
+        .field('director', 'Dr. Arq. Roberto Sánchez')
+        .field('carrera', 'Arquitectura')
+        .field('tipo', TipoDocumento.TESIS)
+        .field('anio', '2025')
+        .field(
+          'resumen',
+          'Relevamiento y puesta en valor de construcciones históricas en tierra cruda en el departamento de Jáchal.',
+        )
+        .field(
+          'palabrasClave',
+          'patrimonio, Jáchal, tierra cruda, arquitectura',
+        )
+        .field('departamentoOrigenId', jachalDepartamentoId)
+        .attach('archivo', validPdfBuffer, {
+          filename: 'patrimonio-vernaculo-jachal.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+
+      expect(response.body.documento).toEqual(
+        expect.objectContaining({
+          titulo: 'Patrimonio vernáculo en Jáchal',
+          autor: 'Arq. Lucía Paredes',
+          carrera: 'Arquitectura',
+          tipo: TipoDocumento.TESIS,
+          anio: 2025,
+          disponible: true,
+          estaDisponible: true,
+          departamentoOrigenId: jachalDepartamentoId,
+          palabrasClave: [
+            'patrimonio',
+            'Jáchal',
+            'tierra cruda',
+            'arquitectura',
+          ],
+        }),
+      );
+      expect(response.body.documento.archivoUrl).toBeUndefined();
+      createdDocumentId = response.body.documento.id;
+    });
+
+    it('GET /api/v1/documentos/:id debe devolver la ficha detallada sin exponer URL directa al PDF y bloquear acceso estático directo', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${createdDocumentId}`)
+        .expect(200);
+
+      expect(response.body.id).toBe(createdDocumentId);
+      expect(response.body.estaDisponible).toBe(true);
+      expect(response.body.archivoUrl).toBeUndefined();
+
+      // Verificamos que la ruta física en base de datos exista pero NO sea accesible públicamente vía HTTP
+      const dbRecord = await prisma.documento.findUnique({
+        where: { id: createdDocumentId },
+      });
+      expect(dbRecord?.archivoUrl).toContain('storage/pdfs/');
+
+      await request(app.getHttpServer())
+        .get(`/${dbRecord?.archivoUrl}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/${dbRecord?.archivoUrl}`)
+        .expect(404);
+    });
+
+    it('PATCH /api/v1/documentos/:id debe permitir al Admin actualizar metadatos y disponibilidad', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/api/v1/documentos/${createdDocumentId}`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .send({
+          disponible: false,
+          director: 'Mg. Arq. Claudia Quiroga',
+        })
+        .expect(200);
+
+      expect(response.body.documento.disponible).toBe(false);
+      expect(response.body.documento.estaDisponible).toBe(false);
+      expect(response.body.documento.director).toBe('Mg. Arq. Claudia Quiroga');
+    });
+
+    it('DELETE /api/v1/documentos/:id debe eliminar el documento de prueba y remover su PDF privado', async () => {
+      await request(app.getHttpServer())
+        .delete(`/api/v1/documentos/${createdDocumentId}`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${createdDocumentId}`)
+        .expect(404);
     });
   });
 });

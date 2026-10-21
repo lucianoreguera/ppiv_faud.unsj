@@ -10,8 +10,7 @@ export class QueryUsersDto {
     example: EstadoValidacionUsuario.PENDIENTE,
   })
   @IsEnum(EstadoValidacionUsuario, {
-    message:
-      'El filtro de estado debe ser PENDIENTE, APROBADO o RECHAZADO.',
+    message: 'El filtro de estado debe ser PENDIENTE, APROBADO o RECHAZADO.',
   })
   @IsOptional()
   estado?: EstadoValidacionUsuario;

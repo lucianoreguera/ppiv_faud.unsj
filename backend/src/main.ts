@@ -53,8 +53,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description:
-          'Token JWT de sesión emitido en POST /api/v1/auth/login',
+        description: 'Token JWT de sesión emitido en POST /api/v1/auth/login',
       },
       'jwt-auth',
     )
@@ -83,7 +82,9 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`Servidor corriendo en: http://localhost:${port}/api/v1/health`);
-  logger.log(`Swagger OpenAPI UI disponible en: http://localhost:${port}/api/docs`);
+  logger.log(
+    `Swagger OpenAPI UI disponible en: http://localhost:${port}/api/docs`,
+  );
 }
 
 void bootstrap();

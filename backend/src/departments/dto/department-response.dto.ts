@@ -28,7 +28,8 @@ export class DepartmentResponseDto {
 
   @ApiProperty({
     example: 2,
-    description: 'Cantidad de usuarios con cuenta APROBADA en este departamento',
+    description:
+      'Cantidad de usuarios con cuenta APROBADA en este departamento',
   })
   usuariosAprobados!: number;
 
@@ -50,13 +51,15 @@ export class DepartmentResponseDto {
 export class TerritorialMetricsResponseDto {
   @ApiProperty({
     example: 19,
-    description: 'Cantidad oficial de departamentos de la provincia de San Juan',
+    description:
+      'Cantidad oficial de departamentos de la provincia de San Juan',
   })
   totalDepartamentos!: number;
 
   @ApiProperty({
     example: 6,
-    description: 'Total de usuarios registrados en todo el territorio provincial',
+    description:
+      'Total de usuarios registrados en todo el territorio provincial',
   })
   totalUsuariosProvincia!: number;
 
