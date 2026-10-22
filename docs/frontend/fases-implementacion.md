@@ -103,7 +103,7 @@ flowchart LR
 
 ---
 
-## Fase 4: Visor PDF Protegido con DRM Temporal (7 Días) y Marca de Agua Dinámica (`RF04`, `RNF02`)
+## Fase 4: Visor PDF Protegido con DRM Temporal (7 Días) y Marca de Agua Dinámica (`RF04`, `RNF02`) (Completada ✅)
 **Objetivo:** Implementar el **Visor Protegido (`/visor/:prestamoId` — Figma página 14 y Diagrama de Secuencia Figura 3)** con renderizado en `<canvas>`, marca de agua dinámica superpuesta, bloqueo de descarga/impresión/copia y corte inmediato ante vencimiento o revocación (`403 Forbidden`).
 
 - **Entregables técnicos:**
@@ -123,7 +123,7 @@ flowchart LR
     - Revalidación periódica de vigencia en segundo plano y al cambiar de página.
     - Si el préstamo vence o es revocado manualmente por un Administrador desde `/admin/prestamos`, el visor destruye el buffer del PDF en memoria y presenta en el acto la pantalla **`"Acceso Bloqueado: El préstamo ha vencido o fue revocado"`**.
 - **Criterio de validación:** Apertura de documento PDF con préstamo `ACTIVO` mostrando el contenido nítido en `<canvas>` con la marca de agua `"Nombre · Préstamo #Código"`, botones de descarga/impresión bloqueados, y transición inmediata a pantalla `403 Forbidden` al revocar o vencer el préstamo.
-- **Documento de seguimiento:** `docs/frontend/fase-04-visor-pdf-protegido-drm.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-04-visor-pdf-protegido-drm.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-04-visor-pdf-protegido-drm.md).
 
 ---
 

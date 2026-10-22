@@ -32,7 +32,11 @@ export interface RemainingTime {
 }
 
 export function getRemainingTime(fechaVencimiento: string, now = Date.now()): RemainingTime {
-  const totalMs = new Date(fechaVencimiento).getTime() - now;
+  return splitRemaining(new Date(fechaVencimiento).getTime() - now);
+}
+
+/** Descompone un plazo en milisegundos en días, horas y minutos */
+export function splitRemaining(totalMs: number): RemainingTime {
   if (!(totalMs > 0)) {
     return { expired: true, totalMs: 0, days: 0, hours: 0, minutes: 0, within24h: false };
   }
@@ -52,6 +56,16 @@ export function formatRemaining(remaining: RemainingTime): string {
   if (remaining.days > 0) return remaining.hours > 0 ? `${remaining.days} d ${remaining.hours} h` : `${remaining.days} d`;
   if (remaining.hours > 0) return remaining.minutes > 0 ? `${remaining.hours} h ${remaining.minutes} min` : `${remaining.hours} h`;
   return remaining.minutes > 0 ? `${remaining.minutes} min` : 'menos de 1 min';
+}
+
+/** Reloj del Visor Protegido: "5 d 3 h" · "7 h 12 min" y, en la última hora, "59:07" con segundos */
+export function formatCountdown(totalMs: number): string {
+  if (!(totalMs > 0)) return '00:00';
+  if (totalMs >= MS_PER_HOUR) return formatRemaining(splitRemaining(totalMs));
+  const totalSeconds = Math.ceil(totalMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 /** Porcentaje del plazo de 7 días ya consumido (barra de vigencia) */

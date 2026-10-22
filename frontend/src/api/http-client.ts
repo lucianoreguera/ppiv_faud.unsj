@@ -138,15 +138,17 @@ export function buildQueryString(params?: Record<string, unknown>): string {
 }
 
 export function extractDrmHeaders(headers: Headers): DrmHeadersMetadata {
+  // X-DRM-Watermark viaja en Latin-1 (los caracteres fuera de rango llegan como "?"): se prefiere la versión URI-encoded
   const watermarkUri = headers.get('X-DRM-Watermark-URI');
-  let decodedWatermark = headers.get('X-DRM-Watermark') ?? undefined;
-  if (!decodedWatermark && watermarkUri) {
+  let decodedWatermark: string | undefined;
+  if (watermarkUri) {
     try {
       decodedWatermark = decodeURIComponent(watermarkUri);
     } catch {
-      decodedWatermark = watermarkUri;
+      decodedWatermark = undefined;
     }
   }
+  decodedWatermark ??= headers.get('X-DRM-Watermark') ?? undefined;
 
   const parseNum = (val: string | null): number | undefined => {
     if (val === null || val.trim() === '') return undefined;
@@ -204,7 +206,11 @@ function classifyErrorCode(status: number, messageText: string): ApiErrorCode {
   return 'SERVER_ERROR';
 }
 
-async function parseHttpError(response: Response, endpoint: string): Promise<ApiHttpError> {
+async function parseHttpError(
+  response: Response,
+  endpoint: string,
+  suppressUnauthorizedEvent = false,
+): Promise<ApiHttpError> {
   const status = response.status;
   const retryAfterHeader =
     response.headers.get('Retry-After') ?? response.headers.get('X-RateLimit-Reset');
@@ -252,7 +258,7 @@ async function parseHttpError(response: Response, endpoint: string): Promise<Api
   });
 
   if (typeof window !== 'undefined') {
-    if (status === 401 && !endpoint.includes('/auth/login')) {
+    if (status === 401 && !suppressUnauthorizedEvent && !endpoint.includes('/auth/login')) {
       window.dispatchEvent(new CustomEvent('faud:unauthorized', { detail: apiError }));
     }
     if (status === 429) {
@@ -273,6 +279,8 @@ export interface HttpRequestOptions extends Omit<RequestInit, 'body'> {
   drmToken?: string | null;
   prestamoId?: string;
   skipAuth?: boolean;
+  /** Un 401 no cierra la sesión (p. ej. token DRM inválido que todavía puede reintentarse con el JWT de sesión) */
+  suppressUnauthorizedEvent?: boolean;
 }
 
 export interface BinaryStreamResponse {
@@ -375,7 +383,7 @@ export async function httpRequest<TResponse>(
   }
 
   if (!response.ok) {
-    throw await parseHttpError(response, endpoint);
+    throw await parseHttpError(response, endpoint, options.suppressUnauthorizedEvent);
   }
 
   if (response.status === 204) {
@@ -419,7 +427,7 @@ export async function httpRequestBinary(
   }
 
   if (!response.ok) {
-    throw await parseHttpError(response, endpoint);
+    throw await parseHttpError(response, endpoint, options.suppressUnauthorizedEvent);
   }
 
   const buffer = await response.arrayBuffer();

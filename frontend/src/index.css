@@ -64,9 +64,19 @@
 .drm-protected-view {
   -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
+.drm-protected-view canvas {
+  -webkit-user-drag: none;
+}
+
+/* body.drm-print-lock lo agrega DrmSecurityShield mientras el visor está abierto: se imprime una hoja en blanco */
 @media print {
+  body.drm-print-lock {
+    display: none !important;
+  }
+
   .drm-protected-view,
   .drm-protected-view * {
     display: none !important;
