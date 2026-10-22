@@ -6,8 +6,8 @@ import type { DepartmentResponseDto, TerritorialMetricsResponseDto } from '../ty
  * Endpoints públicos: GET /api/v1/departamentos · GET /api/v1/departamentos/metricas
  */
 export const departmentsApi = {
-  list: (): Promise<DepartmentResponseDto[]> => {
-    return httpClient.get<DepartmentResponseDto[]>('/departamentos', { skipAuth: true });
+  list: (signal?: AbortSignal): Promise<DepartmentResponseDto[]> => {
+    return httpClient.get<DepartmentResponseDto[]>('/departamentos', { skipAuth: true, signal });
   },
 
   /** Alcance territorial: documentos catalogados y usuarios de Capital frente a los 18 departamentos restantes */

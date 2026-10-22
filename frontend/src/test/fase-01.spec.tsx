@@ -194,7 +194,8 @@ describe('Fase 1 — Autenticación JWT, Registro Interdepartamental y Guardias 
       await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
       await waitFor(() => expect(window.location.pathname).toBe('/admin'));
-      expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+      // La navegación corre en startTransition: la URL cambia antes de que se pinte el panel
+      expect(await screen.findByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
     });
   });
 

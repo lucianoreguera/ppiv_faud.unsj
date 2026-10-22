@@ -127,7 +127,7 @@ flowchart LR
 
 ---
 
-## Fase 5: Panel de Administración de Biblioteca FAUD-UNSJ (`RF01`, `RF04`, `RF05`, `RF06`)
+## Fase 5: Panel de Administración de Biblioteca FAUD-UNSJ (`RF01`, `RF04`, `RF05`, `RF06`) (Completada ✅)
 **Objetivo:** Construir el backoffice completo para el rol `ADMINISTRADOR` (**Figma páginas 7, 8 y 9**), permitiendo validar usuarios de los 19 departamentos, catalogar/editar documentos PDF de hasta 50 MB y auditar/revocar préstamos digitales.
 
 - **Entregables técnicos:**
@@ -146,7 +146,7 @@ flowchart LR
     - Acción **`"Revocar Acceso"`** (`PATCH /api/v1/prestamos/:id/revocar`) con ingreso de motivo administrativo, invalidando en el acto el visor del alumno.
     - Botón **`"Ejecutar Control de Vigencia (Cron Manual)"`** (`POST /api/v1/notificaciones/ejecutar-control-vigencia`) y pestaña de **Auditoría de Notificaciones** (`GET /api/v1/notificaciones/admin`) para verificar en vivo el Diagrama de Actividades (Figura 4).
 - **Criterio de validación:** Circuito administrativo completo verificado: aprobar usuario pendiente de Valle Fértil/Iglesia -> subir un nuevo PDF al catálogo -> monitorear préstamos activos -> revocar un préstamo activo y comprobar su bloqueo.
-- **Documento de seguimiento:** `docs/frontend/fase-05-panel-admin-biblioteca.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-05-panel-admin-biblioteca.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-05-panel-admin-biblioteca.md).
 
 ---
 

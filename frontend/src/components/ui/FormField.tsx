@@ -76,6 +76,43 @@ export const TextField: React.FC<TextFieldProps> = ({
   );
 };
 
+export interface TextAreaFieldProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  plainLabel?: boolean;
+  wrapperClassName?: string;
+  error?: string;
+  /** Texto de ayuda bajo el campo (se oculta mientras haya error) */
+  hint?: string;
+}
+
+/** Área de texto con el estilo de `.field-input` (resumen del documento, motivos administrativos) */
+export const TextAreaField: React.FC<TextAreaFieldProps> = ({
+  label,
+  plainLabel,
+  wrapperClassName,
+  className = '',
+  error,
+  hint,
+  id,
+  rows = 4,
+  ...props
+}) => {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  return (
+    <FieldShell id={fieldId} label={label} plainLabel={plainLabel} error={error} className={wrapperClassName}>
+      <textarea
+        id={fieldId}
+        rows={rows}
+        className={`field-input h-auto py-2.5 leading-relaxed resize-y ${errorClass(error)} ${className}`}
+        {...errorProps(fieldId, error)}
+        {...props}
+      />
+      {hint && !error && <p className="mt-1 text-caption text-faud-muted">{hint}</p>}
+    </FieldShell>
+  );
+};
+
 export const PasswordField: React.FC<Omit<TextFieldProps, 'type'>> = ({
   label,
   plainLabel,

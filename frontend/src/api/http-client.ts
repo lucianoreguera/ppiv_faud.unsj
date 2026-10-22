@@ -440,6 +440,103 @@ export async function httpRequestBinary(
   };
 }
 
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  /** 0 a 100 */
+  percent: number;
+}
+
+export interface HttpUploadOptions {
+  method?: 'POST' | 'PATCH';
+  signal?: AbortSignal;
+  onUploadProgress?: (progress: UploadProgress) => void;
+}
+
+/**
+ * Envío multipart con progreso de subida (catálogo de PDFs de hasta 50 MB, Fase 5).
+ * `fetch` no informa el avance del cuerpo, por eso se usa XMLHttpRequest con los mismos
+ * encabezados JWT y la misma clasificación de errores que `httpRequest`.
+ */
+export function httpUpload<TResponse>(
+  endpoint: string,
+  body: FormData,
+  options: HttpUploadOptions = {},
+): Promise<TResponse> {
+  const url = buildRequestUrl(endpoint);
+  const headers = buildRequestHeaders({ body });
+
+  return new Promise<TResponse>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method ?? 'POST', url);
+    headers.forEach((value, key) => xhr.setRequestHeader(key, value));
+
+    const networkError = (message: string) =>
+      new ApiHttpError({ message, status: 0, code: 'NETWORK_ERROR', path: endpoint });
+
+    const abort = () => xhr.abort();
+    if (options.signal?.aborted) {
+      reject(new DOMException('Carga cancelada.', 'AbortError'));
+      return;
+    }
+    options.signal?.addEventListener('abort', abort, { once: true });
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || !options.onUploadProgress) return;
+      options.onUploadProgress({
+        loaded: event.loaded,
+        total: event.total,
+        percent: Math.min(100, Math.round((event.loaded / event.total) * 100)),
+      });
+    };
+
+    xhr.onerror = () => {
+      options.signal?.removeEventListener('abort', abort);
+      reject(networkError('No se pudo conectar con el servidor Backend para subir el archivo.'));
+    };
+
+    xhr.onabort = () => {
+      options.signal?.removeEventListener('abort', abort);
+      reject(new DOMException('Carga cancelada.', 'AbortError'));
+    };
+
+    xhr.onload = () => {
+      options.signal?.removeEventListener('abort', abort);
+      const responseHeaders = new Headers();
+      xhr
+        .getAllResponseHeaders()
+        .trim()
+        .split(/[\r\n]+/)
+        .forEach((line) => {
+          const index = line.indexOf(':');
+          if (index > 0) responseHeaders.append(line.slice(0, index).trim(), line.slice(index + 1).trim());
+        });
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        if (xhr.status < 200 || xhr.status > 599) {
+          reject(networkError(`Respuesta inválida del servidor (HTTP ${xhr.status}).`));
+          return;
+        }
+        const response = new Response(xhr.responseText, { status: xhr.status, headers: responseHeaders });
+        void parseHttpError(response, endpoint).then(reject);
+        return;
+      }
+
+      if (xhr.status === 204 || !xhr.responseText) {
+        resolve(undefined as TResponse);
+        return;
+      }
+      try {
+        resolve(JSON.parse(xhr.responseText) as TResponse);
+      } catch {
+        reject(networkError('La respuesta del servidor no es un JSON válido.'));
+      }
+    };
+
+    xhr.send(body);
+  });
+}
+
 export const httpClient = {
   get: <T>(endpoint: string, options?: Omit<HttpRequestOptions, 'method' | 'body'>) =>
     httpRequest<T>(endpoint, { ...options, method: 'GET' }),
@@ -455,4 +552,6 @@ export const httpClient = {
 
   getBinary: (endpoint: string, options?: Omit<HttpRequestOptions, 'method' | 'body'>) =>
     httpRequestBinary(endpoint, { ...options, method: 'GET' }),
+
+  upload: <T>(endpoint: string, body: FormData, options?: HttpUploadOptions) => httpUpload<T>(endpoint, body, options),
 };

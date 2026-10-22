@@ -31,4 +31,5 @@ pnpm run test
 - **Seguimiento Fase 2:** [`docs/frontend/fase-02-catalogo-publico-y-ficha.md`](../docs/frontend/fase-02-catalogo-publico-y-ficha.md)
 - **Seguimiento Fase 3:** [`docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md`](../docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md)
 - **Seguimiento Fase 4:** [`docs/frontend/fase-04-visor-pdf-protegido-drm.md`](../docs/frontend/fase-04-visor-pdf-protegido-drm.md)
+- **Seguimiento Fase 5:** [`docs/frontend/fase-05-panel-admin-biblioteca.md`](../docs/frontend/fase-05-panel-admin-biblioteca.md)
 - **Contrato API Congelado (OpenAPI 3.0):** [`docs/specs/openapi.json`](../docs/specs/openapi.json)

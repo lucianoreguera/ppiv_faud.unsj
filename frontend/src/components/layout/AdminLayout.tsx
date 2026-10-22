@@ -3,20 +3,40 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { LogOut, Menu, PanelTop, Square, SquareMinus, User, X } from 'lucide-react';
 import { BrandMark, BrandWordmark } from './Brand';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminIndicatorsLoader, type AdminIndicators } from '../../hooks/useAdminIndicators';
 
 /**
  * Layout del Panel de Administración (Figma págs. 7, 8, 9 y 17)
  * Sidebar fijo izquierdo de 240px (#2D2D2D) + contenido sobre crema #FFF9EC.
  * En mobile: top bar de 56px con menú hamburguesa.
+ * Indicadores rápidos: cuentas pendientes de validación (Usuarios) y préstamos por vencer en 24h (Préstamos).
  */
-const ADMIN_NAV = [
+const ADMIN_NAV: {
+  to: string;
+  label: string;
+  icon: typeof Square;
+  end: boolean;
+  indicator?: (i: AdminIndicators) => { count: number; label: string } | null;
+}[] = [
   { to: '/admin', label: 'Panel', icon: Square, end: true },
   { to: '/admin/catalogo', label: 'Documentos', icon: SquareMinus, end: false },
-  { to: '/admin/usuarios', label: 'Usuarios', icon: User, end: false },
-  { to: '/admin/prestamos', label: 'Préstamos', icon: PanelTop, end: false },
+  {
+    to: '/admin/usuarios',
+    label: 'Usuarios',
+    icon: User,
+    end: false,
+    indicator: (i) => i.usuarios && { count: i.usuarios.pendientes, label: 'cuentas pendientes de validación' },
+  },
+  {
+    to: '/admin/prestamos',
+    label: 'Préstamos',
+    icon: PanelTop,
+    end: false,
+    indicator: (i) => i.prestamos && { count: i.prestamos.porVencer24h, label: 'préstamos por vencer en 24 horas' },
+  },
 ];
 
-const SidebarContent: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
+const SidebarContent: React.FC<{ onLogout: () => void; indicators: AdminIndicators }> = ({ onLogout, indicators }) => (
   <div className="relative h-full flex flex-col">
     {/* Líneas guía verticales (grid de blueprint, Figma pág. 24) */}
     <span aria-hidden="true" className="absolute inset-y-0 left-[26px] w-px bg-faud-amber/[0.07]" />
@@ -32,7 +52,9 @@ const SidebarContent: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
     </Link>
 
     <nav aria-label="Navegación de administración" className="relative flex flex-col">
-      {ADMIN_NAV.map(({ to, label, icon: Icon, end }) => (
+      {ADMIN_NAV.map(({ to, label, icon: Icon, end, indicator }) => {
+        const badge = indicator?.(indicators);
+        return (
         <NavLink
           key={to}
           to={to}
@@ -47,8 +69,18 @@ const SidebarContent: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
         >
           <Icon className="w-[18px] h-[18px]" strokeWidth={1.75} />
           {label}
+          {badge && badge.count > 0 && (
+            <span
+              className="ml-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-pill bg-faud-amber text-faud-ink text-[11px] font-bold"
+              aria-label={`${badge.count} ${badge.label}`}
+              title={`${badge.count} ${badge.label}`}
+            >
+              {badge.count}
+            </span>
+          )}
         </NavLink>
-      ))}
+        );
+      })}
     </nav>
 
     <div className="relative mt-auto">
@@ -77,6 +109,7 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const panel = useAdminIndicatorsLoader();
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -89,7 +122,7 @@ export const AdminLayout: React.FC = () => {
     <div className="min-h-screen bg-faud-cream text-faud-text lg:flex">
       {/* Sidebar desktop fijo 240px */}
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-sidebar bg-faud-dark z-30">
-        <SidebarContent onLogout={handleLogout} />
+        <SidebarContent onLogout={handleLogout} indicators={panel.indicators} />
       </aside>
 
       {/* Top bar mobile (Figma pág. 17) */}
@@ -110,36 +143,42 @@ export const AdminLayout: React.FC = () => {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 top-topbar z-30 bg-faud-ink/40" onClick={() => setMenuOpen(false)}>
           <aside className="w-sidebar h-full bg-faud-dark" onClick={(e) => e.stopPropagation()}>
-            <SidebarContent onLogout={handleLogout} />
+            <SidebarContent onLogout={handleLogout} indicators={panel.indicators} />
           </aside>
         </div>
       )}
 
       <main className="flex-1 min-w-0 lg:ml-sidebar px-5 py-4 lg:px-[60px] lg:pt-12 lg:pb-12">
-        <Outlet />
+        <Outlet context={panel} />
       </main>
     </div>
   );
 };
 
-/** Encabezado de página del panel admin: H2 + subtítulo + línea divisoria con acento */
-export const AdminPageHeader: React.FC<{ title: string; subtitle: string; mobileSubtitle?: string }> = ({
-  title,
-  subtitle,
-  mobileSubtitle,
-}) => (
+/** Encabezado de página del panel admin: H2 + subtítulo (+ acciones a la derecha) + línea divisoria con acento */
+export const AdminPageHeader: React.FC<{
+  title: string;
+  subtitle: string;
+  mobileSubtitle?: string;
+  actions?: React.ReactNode;
+}> = ({ title, subtitle, mobileSubtitle, actions }) => (
   <header className="mb-5 lg:mb-8">
-    <h1 className="text-[20px] lg:text-[32px] font-bold text-faud-ink leading-tight">{title}</h1>
-    <p className="text-caption lg:text-[16px] text-faud-muted mt-0.5 lg:mt-1">
-      {mobileSubtitle ? (
-        <>
-          <span className="lg:hidden">{mobileSubtitle}</span>
-          <span className="hidden lg:inline">{subtitle}</span>
-        </>
-      ) : (
-        subtitle
-      )}
-    </p>
+    <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6">
+      <div className="flex-1 min-w-0">
+        <h1 className="text-[20px] lg:text-[32px] font-bold text-faud-ink leading-tight">{title}</h1>
+        <p className="text-caption lg:text-[16px] text-faud-muted mt-0.5 lg:mt-1">
+          {mobileSubtitle ? (
+            <>
+              <span className="lg:hidden">{mobileSubtitle}</span>
+              <span className="hidden lg:inline">{subtitle}</span>
+            </>
+          ) : (
+            subtitle
+          )}
+        </p>
+      </div>
+      {actions && <div className="flex flex-wrap gap-2.5 shrink-0">{actions}</div>}
+    </div>
     <div className="relative h-px bg-faud-border-warm mt-2 lg:mt-7">
       <span className="absolute left-0 -top-px h-[3px] w-7 lg:w-10 bg-faud-amber" />
     </div>

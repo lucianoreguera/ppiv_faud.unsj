@@ -1,5 +1,7 @@
 import { httpClient, type BinaryStreamResponse } from './http-client';
 import type {
+  AdminLoansFilterParams,
+  AdminLoansListResponseDto,
   CreateLoanResponseDto,
   LoanStateTransitionResponseDto,
   LoanViewerMetadataResponseDto,
@@ -23,8 +25,9 @@ const drmOptions = (prestamoId: string, options: DrmRequestOptions) => ({
 });
 
 /**
- * Servicio de préstamos digitales del usuario autenticado (RF03, RF04)
+ * Servicio de préstamos digitales (RF03, RF04)
  * Endpoints: POST /api/v1/prestamos · GET /api/v1/prestamos/mis-prestamos · PATCH /api/v1/prestamos/:id/cerrar
+ * Solo Admin: GET /api/v1/prestamos · PATCH /api/v1/prestamos/:id/revocar
  * Visor Protegido (Figura 3): GET /api/v1/prestamos/:id/visor · GET /api/v1/documentos/:id/ver · GET /api/v1/prestamos/:id/contenido
  */
 export const loansApi = {
@@ -43,6 +46,22 @@ export const loansApi = {
   /** Devolución anticipada (ACTIVO) o archivo (VENCIDO / REVOCADO) → CERRADO */
   close: (prestamoId: string): Promise<LoanStateTransitionResponseDto> => {
     return httpClient.patch<LoanStateTransitionResponseDto>(`/prestamos/${encodeURIComponent(prestamoId)}/cerrar`);
+  },
+
+  /** Tablero de Biblioteca (Solo Admin): métricas globales + listado paginado con filtros */
+  adminList: (params: AdminLoansFilterParams = {}, signal?: AbortSignal): Promise<AdminLoansListResponseDto> => {
+    return httpClient.get<AdminLoansListResponseDto>('/prestamos', {
+      params: params as Record<string, unknown>,
+      signal,
+    });
+  },
+
+  /** ACTIVO → REVOCADO (Solo Admin): el visor del titular queda bloqueado en el acto (409 si no está ACTIVO) */
+  revoke: (prestamoId: string, motivo?: string): Promise<LoanStateTransitionResponseDto> => {
+    return httpClient.patch<LoanStateTransitionResponseDto>(
+      `/prestamos/${encodeURIComponent(prestamoId)}/revocar`,
+      motivo ? { motivo } : {},
+    );
   },
 
   /** Validación de vigencia y metadatos del visor: marca de agua, segundos restantes y restricciones DRM (403 si venció o fue revocado) */
