@@ -49,10 +49,14 @@ PPI_IV/
 ├── documentación/                 # Documentos académicos originales (Etapas 1 y 2, Figma PDFs)
 ├── docs/                          # Documentación viva de ingeniería e implementación (.md)
 │   ├── 00-plan-maestro-desarrollo.md
-│   ├── specs/                     # Especificaciones OpenSpec (dominio, contratos, casos de uso)
-│   ├── backend/                   # Fases de implementación del Backend y guías de prueba
+│   ├── specs/                     # Especificaciones OpenSpec (dominio, contratos, UI/UX y DRM)
+│   │   ├── 01-especificacion-dominio-y-contratos.md
+│   │   ├── 02-especificacion-frontend-ui-ux-y-drm.md
+│   │   └── openapi.json
+│   ├── backend/                   # Fases de implementación del Backend y guías de prueba (Completadas ✅)
 │   │   └── fases-implementacion.md
-│   └── frontend/                  # (Futuro) Fases de implementación del Frontend
+│   └── frontend/                  # Fases de implementación del Frontend SPA (Etapa C)
+│       └── fases-implementacion.md
 ├── backend/                       # API Modular en NestJS + TypeScript + PostgreSQL (gestionado con pnpm)
 ├── frontend/                      # SPA en React + Vite + TypeScript + Tailwind CSS (gestionado con pnpm)
 └── docker-compose.yml             # Orquestación local (PostgreSQL + Mailpit + Backend + Frontend)
