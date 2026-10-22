@@ -132,7 +132,9 @@ describe('Fase 0 — Cliente HTTP Tipado, Tokens DRM y Layout Institucional FAUD
     }
   });
 
-  it('renderiza la portada del Repositorio FAUD según el prototipo Figma (pág. 4)', () => {
+  it('renderiza la portada del Repositorio FAUD según el prototipo Figma (pág. 4)', async () => {
+    // Las métricas de alcance (Fase 2) quedan en "—" sin conexión con el Backend
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
     window.history.pushState({}, '', '/');
     render(<App />);
 
@@ -143,6 +145,7 @@ describe('Fase 0 — Cliente HTTP Tipado, Tokens DRM y Layout Institucional FAUD
     expect(screen.getByRole('link', { name: /Explorar Catálogo/i })).toHaveAttribute('href', '/catalogo');
     expect(screen.getByRole('link', { name: /Iniciar Sesión/i })).toHaveAttribute('href', '/login');
     expect(screen.getByText(/Desarrollado por : DHL Solutions/i)).toBeInTheDocument();
+    expect(await screen.findAllByText('—')).toHaveLength(2);
   });
 
   it('muestra el estado en vivo de GET /api/v1/health en la página del Design System', async () => {

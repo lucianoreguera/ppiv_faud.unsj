@@ -1,54 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  AUTH_USER_STORAGE_KEY,
-  clearAllDrmTokens,
-  clearAuthToken,
-  getAuthToken,
-  setAuthToken,
-} from '../api/http-client';
-import { App } from '../App';
+import { AUTH_USER_STORAGE_KEY, clearAllDrmTokens, clearAuthToken, getAuthToken } from '../api/http-client';
 import { resolvePostLoginPath, sanitizeRedirect } from '../routes/auth-redirect';
-import type {
-  DepartmentResponseDto,
-  LoginResponseDto,
-  RegisterResponseDto,
-  UserProfileResponseDto,
-} from '../types/openapi.types';
-
-// ============================================================================
-// Fixtures alineadas con backend/prisma/seed.ts
-// ============================================================================
-
-const department = (id: string, nombre: string, esCapital = false): DepartmentResponseDto => ({
-  id,
-  nombre,
-  esCapital,
-  totalUsuarios: 0,
-  usuariosAprobados: 0,
-  usuariosPendientes: 0,
-  totalDocumentos: 0,
-});
+import type { DepartmentResponseDto, LoginResponseDto, RegisterResponseDto } from '../types/openapi.types';
+import { department, json, mockBackend, profile, renderAt, startSession } from './test-utils';
 
 const DEPARTAMENTOS: DepartmentResponseDto[] = [
   department('d-capital', 'Capital', true),
   department('d-jachal', 'Jáchal'),
   department('d-valle-fertil', 'Valle Fértil'),
 ];
-
-const profile = (overrides: Partial<UserProfileResponseDto> = {}): UserProfileResponseDto => ({
-  id: 'u-ana',
-  nombre: 'Ana Pérez',
-  email: 'ana.perez@jachal.gov.ar',
-  rol: 'USUARIO',
-  estadoValidacion: 'APROBADO',
-  departamentoId: 'd-jachal',
-  departamento: { id: 'd-jachal', nombre: 'Jáchal', esCapital: false },
-  createdAt: '2026-10-01T12:00:00.000Z',
-  updatedAt: '2026-10-01T12:00:00.000Z',
-  ...overrides,
-});
 
 const ADMIN = profile({
   id: 'u-admin',
@@ -58,35 +20,6 @@ const ADMIN = profile({
   departamentoId: 'd-capital',
   departamento: { id: 'd-capital', nombre: 'Capital', esCapital: true },
 });
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-
-type RouteHandler = (init: RequestInit) => Response;
-
-/** Simula el Backend respondiendo por "MÉTODO /ruta" (sin el prefijo /api/v1) */
-function mockBackend(routes: Record<string, RouteHandler>) {
-  const fetchMock = vi.fn((input: RequestInfo | URL, init: RequestInit = {}) => {
-    const url = new URL(String(input));
-    const path = url.pathname.replace(/^\/api\/v1/, '');
-    const key = `${init.method ?? 'GET'} ${path}`;
-    const handler = routes[key];
-    if (!handler) return Promise.resolve(json({ statusCode: 404, message: `Sin mock para ${key}` }, 404));
-    return Promise.resolve(handler(init));
-  });
-  globalThis.fetch = fetchMock as unknown as typeof fetch;
-  return fetchMock;
-}
-
-const renderAt = (path: string) => {
-  window.history.pushState({}, '', path);
-  return render(<App />);
-};
-
-const startSession = (user: UserProfileResponseDto) => {
-  setAuthToken(`jwt-${user.id}`);
-  localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
-};
 
 describe('Fase 1 — Autenticación JWT, Registro Interdepartamental y Guardias de Rol (RF05)', () => {
   const originalFetch = globalThis.fetch;

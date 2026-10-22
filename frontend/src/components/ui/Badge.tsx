@@ -166,8 +166,27 @@ export const LoanStatusBadge: React.FC<{
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 };
 
+/** Disponibilidad en el catálogo: `disponible = false` indica material suspendido por Biblioteca (RF02) */
+export const AvailabilityBadge: React.FC<{
+  disponible: boolean;
+  size?: BadgeProps['size'];
+  className?: string;
+}> = ({ disponible, size = 'sm', className }) => (
+  <Badge variant={disponible ? 'success' : 'inactive'} dot size={size} className={className}>
+    {disponible ? 'Disponible' : 'No disponible'}
+  </Badge>
+);
+
 export const TIPO_DOCUMENTO_LABEL: Record<TipoDocumento, string> = {
   TESIS: 'Tesis',
+  MONOGRAFIA: 'Monografía',
+  INVESTIGACION: 'Investigación',
+  OTROS: 'Otros',
+};
+
+/** Ficha bibliográfica (Figma págs. 12 y 19) */
+export const TIPO_DOCUMENTO_LABEL_LARGO: Record<TipoDocumento, string> = {
+  TESIS: 'Tesis de Grado',
   MONOGRAFIA: 'Monografía',
   INVESTIGACION: 'Investigación',
   OTROS: 'Otros',

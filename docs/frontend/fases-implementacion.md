@@ -55,7 +55,7 @@ flowchart LR
 
 ---
 
-## Fase 2: Catálogo Público Interdepartamental, Buscador Combinado y Ficha Bibliográfica (`RF02`)
+## Fase 2: Catálogo Público Interdepartamental, Buscador Combinado y Ficha Bibliográfica (`RF02`) (Completada ✅)
 **Objetivo:** Construir las pantallas públicas de exploración académica (**Figma páginas 11 y 12**), con búsqueda multicriterio en tiempo real, métricas de alcance en los 19 departamentos y vista detallada del documento.
 
 - **Entregables técnicos:**
@@ -74,7 +74,7 @@ flowchart LR
     - Recuadro informativo de **Condiciones de Préstamo Digital y Derechos de Autor (DRM 7 días)**.
     - Botón de acción contextual según sesión y disponibilidad (solicitar préstamo, ir al visor si ya tiene préstamo activo sobre la obra, o iniciar sesión).
 - **Criterio de validación:** Navegación pública fluida, filtrado combinado por departamento/carrera/tipo/texto contra `GET /api/v1/documentos` y visualización completa de la ficha bibliográfica sin exponer URLs directas al PDF.
-- **Documento de seguimiento:** `docs/frontend/fase-02-catalogo-publico-y-ficha.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-02-catalogo-publico-y-ficha.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-02-catalogo-publico-y-ficha.md).
 
 ---
 

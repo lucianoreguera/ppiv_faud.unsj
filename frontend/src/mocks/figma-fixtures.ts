@@ -5,8 +5,6 @@
  * Alimentan las vistas en la Fase 0 para validar el diseño. Cada fase posterior
  * reemplaza su porción por la respuesta real del Backend (docs/specs/openapi.json).
  */
-import type { TipoDocumento } from '../types/openapi.types';
-
 export const DEPARTAMENTOS_SAN_JUAN = [
   'Albardón',
   'Angaco',
@@ -37,83 +35,6 @@ export const TIPOS_DOCUMENTO_FORM = [
   'Investigación',
   'Otros',
 ] as const;
-
-export interface CatalogDocumentFixture {
-  id: string;
-  titulo: string;
-  subtitulo?: string;
-  tipo: TipoDocumento;
-  tipoLabelLargo: string;
-  carrera: string;
-  autorCorto: string;
-  autor: string;
-  anio: number;
-  departamento: string;
-  disponible: boolean;
-  director?: string;
-  resumen?: string;
-  palabrasClave?: string[];
-  idioma?: string;
-  formato?: string;
-}
-
-export const CATALOG_DOCUMENTS: CatalogDocumentFixture[] = [
-  {
-    id: 'accesibilidad-urbana-san-juan',
-    titulo: 'Accesibilidad urbana en San Juan',
-    subtitulo: 'Análisis de barreras arquitectónicas en el microcentro',
-    tipo: 'TESIS',
-    tipoLabelLargo: 'Tesis de Grado',
-    carrera: 'Arquitectura',
-    autorCorto: 'M. González',
-    autor: 'Martín González',
-    anio: 2023,
-    departamento: 'Capital',
-    disponible: true,
-    director: 'Arq. Laura Estévez',
-    resumen:
-      'El presente trabajo final de grado analiza las condiciones actuales de accesibilidad urbana en el microcentro de la Ciudad de San Juan. A través de un relevamiento in situ y el estudio de las normativas vigentes, se identifican las principales barreras arquitectónicas que limitan la movilidad de personas con discapacidad motriz y visual. El documento concluye con una propuesta de intervención a nivel urbano y arquitectónico para las principales arterias peatonales, priorizando el diseño universal.',
-    palabrasClave: ['Accesibilidad', 'Diseño Universal', 'Urbanismo', 'Barreras Físicas'],
-    idioma: 'Español',
-    formato: 'PDF · 124 pág.',
-  },
-  {
-    id: 'vivienda-social-cuyo',
-    titulo: 'Vivienda social en Cuyo',
-    tipo: 'INVESTIGACION',
-    tipoLabelLargo: 'Investigación',
-    carrera: 'Arquitectura',
-    autorCorto: 'L. Martínez',
-    autor: 'Lucía Martínez',
-    anio: 2021,
-    departamento: 'Jáchal',
-    disponible: false,
-  },
-  {
-    id: 'patrimonio-arquitectonico-sanjuanino',
-    titulo: 'Patrimonio arquitectónico sanjuanino',
-    tipo: 'MONOGRAFIA',
-    tipoLabelLargo: 'Monografía',
-    carrera: 'Arquitectura',
-    autorCorto: 'C. Ruiz',
-    autor: 'Carlos Ruiz',
-    anio: 2018,
-    departamento: 'Valle Fértil',
-    disponible: true,
-  },
-  {
-    id: 'diseno-bioclimatico-zonas-aridas',
-    titulo: 'Diseño bioclimático en zonas áridas',
-    tipo: 'TESIS',
-    tipoLabelLargo: 'Tesis de Grado',
-    carrera: 'Diseño',
-    autorCorto: 'E. Silva',
-    autor: 'Elena Silva',
-    anio: 2024,
-    departamento: 'Iglesia',
-    disponible: true,
-  },
-];
 
 export type MyLoanTab = 'activos' | 'vencidos' | 'solicitados';
 
