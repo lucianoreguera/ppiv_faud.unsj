@@ -13,15 +13,24 @@ import {
   Min,
 } from 'class-validator';
 
-const transformOptionalBoolean = ({ value }: { value: unknown }) => {
-  if (value === undefined || value === null || value === '') {
+const transformOptionalBoolean = ({
+  value,
+  obj,
+  key,
+}: {
+  value: unknown;
+  obj?: Record<string, unknown>;
+  key?: string;
+}) => {
+  const raw = key && obj && key in obj ? obj[key] : value;
+  if (raw === undefined || raw === null || raw === '') {
     return undefined;
   }
-  if (typeof value === 'boolean') {
-    return value;
+  if (typeof raw === 'boolean') {
+    return raw;
   }
-  if (typeof value === 'string') {
-    const lower = value.toLowerCase().trim();
+  if (typeof raw === 'string') {
+    const lower = raw.toLowerCase().trim();
     if (lower === 'true' || lower === '1') return true;
     if (lower === 'false' || lower === '0') return false;
   }

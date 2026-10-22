@@ -5,13 +5,14 @@ import {
   EstadoValidacionUsuario,
   RolUsuario,
   TipoDocumento,
+  TipoNotificacion,
 } from '@prisma/client';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PdfStorageService } from './../src/catalog/pdf-storage.service';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
+describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -21,12 +22,17 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
   let adminAccessToken: string;
   let studentAccessToken: string;
   let anaAccessToken: string;
+  let sofiaAccessToken: string;
   let createdDocumentId: string;
   let seedDocumentId: string;
+  let secondSeedDocumentId: string;
   let studentLoanId: string;
   let studentLoanDrmToken: string;
   let anaLoanId: string;
   let anaLoanDrmToken: string;
+  let reminder24hLoanId: string;
+  let cronExpiredLoanId: string;
+  let reminder24hNotificationId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -53,7 +59,13 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
     await prisma.prestamo.deleteMany({
       where: {
         usuario: {
-          email: { in: [testUserEmail, 'ana.perez@jachal.gov.ar'] },
+          email: {
+            in: [
+              testUserEmail,
+              'ana.perez@jachal.gov.ar',
+              'sofia.navarro@caucete.gob.ar',
+            ],
+          },
         },
       },
     });
@@ -67,7 +79,13 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
       await prisma.prestamo.deleteMany({
         where: {
           usuario: {
-            email: { in: [testUserEmail, 'ana.perez@jachal.gov.ar'] },
+            email: {
+              in: [
+                testUserEmail,
+                'ana.perez@jachal.gov.ar',
+                'sofia.navarro@caucete.gob.ar',
+              ],
+            },
           },
         },
       });
@@ -731,6 +749,185 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3 y 4 (e2e)', () => {
         where: { id: anaLoanId },
       });
       expect(updatedLoan?.estado).toBe(EstadoPrestamo.VENCIDO);
+    });
+  });
+
+  describe('Fase 5 — Módulo de Notificaciones y Tareas Programadas (RF06)', () => {
+    beforeAll(async () => {
+      const docAccesibilidad = await prisma.documento.findFirst({
+        where: { titulo: 'Accesibilidad urbana en San Juan' },
+      });
+      expect(docAccesibilidad).toBeDefined();
+      secondSeedDocumentId = docAccesibilidad!.id;
+    });
+
+    it('GET /api/v1/notificaciones debe listar las notificaciones del estudiante autenticado con contadores de lectura y por tipo', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/notificaciones')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(200);
+
+      expect(response.body.contadores).toEqual(
+        expect.objectContaining({
+          total: 2,
+          noLeidas: 2,
+          leidas: 0,
+          porTipo: expect.objectContaining({
+            PRESTAMO_OTORGADO: 1,
+            PRESTAMO_REVOCADO: 1,
+          }),
+        }),
+      );
+      expect(response.body.items).toHaveLength(2);
+    });
+
+    it('POST /api/v1/notificaciones/ejecutar-control-vigencia (Figura 4 — RF06) debe procesar préstamos vencidos (ACTIVO -> VENCIDO), generar recordatorios 24h antes (enviarRecordatorio) y enviar correos en Mailpit', async () => {
+      // 1. Creamos un nuevo préstamo ACTIVO para Ramiro Quiroga y simulamos que le quedan 12 horas de vigencia (<= 24h)
+      const loan24hRes = await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .send({
+          documentoId: secondSeedDocumentId,
+        })
+        .expect(201);
+
+      reminder24hLoanId = loan24hRes.body.prestamo.id;
+
+      await prisma.prestamo.update({
+        where: { id: reminder24hLoanId },
+        data: {
+          fechaVencimiento: new Date(Date.now() + 12 * 3600 * 1000),
+        },
+      });
+
+      // 2. Autenticamos a Sofía Navarro (Caucete), creamos un préstamo ACTIVO y simulamos que venció hace 2 horas
+      const loginSofia = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'sofia.navarro@caucete.gob.ar',
+          password: 'Alumno123!',
+        })
+        .expect(200);
+
+      sofiaAccessToken = loginSofia.body.accessToken;
+
+      const loanSofiaRes = await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${sofiaAccessToken}`)
+        .send({
+          documentoId: secondSeedDocumentId,
+        })
+        .expect(201);
+
+      cronExpiredLoanId = loanSofiaRes.body.prestamo.id;
+
+      await prisma.prestamo.update({
+        where: { id: cronExpiredLoanId },
+        data: {
+          fechaVencimiento: new Date(Date.now() - 2 * 3600 * 1000),
+        },
+      });
+
+      // 3. Ejecutamos el servicio de verificación y tareas programadas (Control Continuo de Vigencia — Figura 4)
+      const cronRes = await request(app.getHttpServer())
+        .post('/api/v1/notificaciones/ejecutar-control-vigencia')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      expect(cronRes.body.prestamosVencidosProcesados).toBeGreaterThanOrEqual(
+        1,
+      );
+      expect(cronRes.body.alertas24hGeneradas).toBeGreaterThanOrEqual(1);
+
+      const vencidoProcesado = cronRes.body.detalleVencidos.find(
+        (item: { prestamoId: string }) => item.prestamoId === cronExpiredLoanId,
+      );
+      expect(vencidoProcesado).toBeDefined();
+      expect(vencidoProcesado.tipoNotificacion).toBe(
+        TipoNotificacion.PRESTAMO_VENCIDO,
+      );
+
+      const alerta24hProcesada = cronRes.body.detalleAlertas24h.find(
+        (item: { prestamoId: string }) => item.prestamoId === reminder24hLoanId,
+      );
+      expect(alerta24hProcesada).toBeDefined();
+      expect(alerta24hProcesada.tipoNotificacion).toBe(
+        TipoNotificacion.PROXIMO_VENCIMIENTO_24H,
+      );
+      reminder24hNotificationId = alerta24hProcesada.notificacionId;
+
+      // Verificamos en PostgreSQL que el préstamo de Sofía pasó automáticamente a VENCIDO
+      const dbExpiredLoan = await prisma.prestamo.findUnique({
+        where: { id: cronExpiredLoanId },
+      });
+      expect(dbExpiredLoan?.estado).toBe(EstadoPrestamo.VENCIDO);
+
+      // 4. Verificamos idempotencia: una segunda corrida inmediata no debe duplicar ni reenviar alertas 24h ni vencimientos
+      const secondCronRes = await request(app.getHttpServer())
+        .post('/api/v1/notificaciones/ejecutar-control-vigencia')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      expect(secondCronRes.body.prestamosVencidosProcesados).toBe(0);
+      expect(secondCronRes.body.alertas24hGeneradas).toBe(0);
+    });
+
+    it('PATCH /api/v1/notificaciones/:id/leida debe permitir al estudiante marcar la alerta de 24h como leída y bloquear a otros usuarios con 403 Forbidden', async () => {
+      // Otro estudiante (Ana Pérez) no puede marcar la notificación de Ramiro Quiroga
+      await request(app.getHttpServer())
+        .patch(`/api/v1/notificaciones/${reminder24hNotificationId}/leida`)
+        .set('Authorization', `Bearer ${anaAccessToken}`)
+        .send({ leida: true })
+        .expect(403);
+
+      // El titular (Ramiro Quiroga) marca su notificación como leída
+      const readRes = await request(app.getHttpServer())
+        .patch(`/api/v1/notificaciones/${reminder24hNotificationId}/leida`)
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .send({ leida: true })
+        .expect(200);
+
+      expect(readRes.body.notificacion.id).toBe(reminder24hNotificationId);
+      expect(readRes.body.notificacion.leida).toBe(true);
+      expect(readRes.body.notificacion.tipo).toBe(
+        TipoNotificacion.PROXIMO_VENCIMIENTO_24H,
+      );
+    });
+
+    it('PATCH /api/v1/notificaciones/marcar-todas-leidas debe marcar todas las notificaciones pendientes del usuario como leídas', async () => {
+      const markAllRes = await request(app.getHttpServer())
+        .patch('/api/v1/notificaciones/marcar-todas-leidas')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(200);
+
+      expect(markAllRes.body.actualizadas).toBeGreaterThanOrEqual(1);
+
+      const listAfterRes = await request(app.getHttpServer())
+        .get('/api/v1/notificaciones')
+        .query({ leida: false })
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(200);
+
+      expect(listAfterRes.body.contadores.noLeidas).toBe(0);
+      expect(listAfterRes.body.items).toHaveLength(0);
+    });
+
+    it('GET /api/v1/notificaciones/admin debe permitir al Administrador auditar las notificaciones globales y rechazar con 403 a usuarios regulares', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/notificaciones/admin')
+        .set('Authorization', `Bearer ${studentAccessToken}`)
+        .expect(403);
+
+      const adminNotifRes = await request(app.getHttpServer())
+        .get('/api/v1/notificaciones/admin')
+        .query({ tipo: TipoNotificacion.PROXIMO_VENCIMIENTO_24H })
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+
+      expect(
+        adminNotifRes.body.contadores.porTipo.PROXIMO_VENCIMIENTO_24H,
+      ).toBeGreaterThanOrEqual(1);
+      expect(adminNotifRes.body.items.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

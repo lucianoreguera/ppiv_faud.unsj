@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.validation';
 import { DepartmentsModule } from './departments/departments.module';
 import { HealthModule } from './health/health.module';
 import { LoansModule } from './loans/loans.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
       envFilePath: ['.env'],
     }),
     PrismaModule,
+    NotificationsModule,
     HealthModule,
     DepartmentsModule,
     AuthModule,

@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { EstadoValidacionUsuario, Prisma, RolUsuario } from '@prisma/client';
+import { EmailService } from '../notifications/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
@@ -15,7 +17,10 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly emailService?: EmailService,
+  ) {}
 
   /**
    * Lista los usuarios para el Panel de Administración de Biblioteca (RF05 - Figma pág. 8).
@@ -195,6 +200,16 @@ export class UsersService {
         },
       },
     });
+
+    if (this.emailService && estadoAnterior !== dto.estado) {
+      await this.emailService.sendAccountValidationEmail({
+        to: usuarioActualizado.email,
+        usuarioNombre: usuarioActualizado.nombre,
+        departamentoNombre: usuarioActualizado.departamento.nombre,
+        estado: dto.estado,
+        motivo: dto.motivo,
+      });
+    }
 
     return {
       message: `El estado de validación del usuario ${usuarioActualizado.nombre} (${usuarioActualizado.departamento.nombre}) fue actualizado a ${dto.estado}.`,

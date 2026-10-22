@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +25,7 @@ import {
   AuthenticatedUser,
   JwtPayload,
 } from '../common/interfaces/authenticated-user.interface';
+import { EmailService } from '../notifications/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import {
@@ -99,6 +101,7 @@ export class LoansService {
     private readonly configService: ConfigService,
     private readonly catalogService: CatalogService,
     private readonly pdfStorageService: PdfStorageService,
+    @Optional() private readonly emailService?: EmailService,
   ) {
     const drmSecret = this.configService.get<string>('drm.loanJwtSecret');
     if (!drmSecret) {
@@ -285,6 +288,19 @@ export class LoansService {
     this.logger.log(
       `Préstamo ${codigoFormateado} otorgado a ${usuario.email} (${usuario.departamento.nombre}) sobre "${documento.titulo}" hasta ${fechaVencimiento.toISOString()}`,
     );
+
+    if (this.emailService) {
+      await this.emailService.sendLoanGrantedEmail({
+        to: usuario.email,
+        usuarioNombre: usuario.nombre,
+        departamentoNombre: usuario.departamento.nombre,
+        codigoFormateado,
+        documentoTitulo: prestamoConToken.documento.titulo,
+        documentoAutor: prestamoConToken.documento.autor,
+        fechaInicio,
+        fechaVencimiento,
+      });
+    }
 
     return {
       message: `Préstamo digital ${codigoFormateado} otorgado exitosamente por ${this.loanDurationDays} días corridos. Ya puede acceder al visor protegido.`,
@@ -632,6 +648,17 @@ export class LoansService {
     this.logger.log(
       `Préstamo ${codigoFormateado} revocado manualmente. Usuario: ${actualizado.usuario.email}`,
     );
+
+    if (this.emailService) {
+      await this.emailService.sendLoanRevokedEmail({
+        to: actualizado.usuario.email,
+        usuarioNombre: actualizado.usuario.nombre,
+        departamentoNombre: actualizado.usuario.departamento.nombre,
+        codigoFormateado,
+        documentoTitulo: actualizado.documento.titulo,
+        motivo: motivoTexto,
+      });
+    }
 
     return {
       message: `El préstamo ${codigoFormateado} fue revocado inmediatamente. El acceso de visualización al documento PDF ha quedado bloqueado.`,

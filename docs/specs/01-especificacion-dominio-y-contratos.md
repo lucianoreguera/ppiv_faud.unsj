@@ -104,3 +104,25 @@ export enum TipoNotificacion {
   - **Given** un préstamo cuyo plazo de 7 días expiró (`VENCIDO`) o que fue revocado por Biblioteca (`REVOCADO`)
   - **When** el usuario intenta acceder a `GET /api/v1/documentos/:id/ver`
   - **Then** el sistema rechaza la petición con `403 Forbidden` y mensaje `"El préstamo ha vencido o fue revocado"`.
+
+---
+
+### Spec 04 — Notificaciones y Tareas Programadas de Vigencia (`RF06`)
+- **Regla de negocio:**
+  1. **Control continuo de vigencia (Diagrama de Actividades — Figura 4):** Un proceso programado periódico (`@nestjs/schedule`) evalúa de forma continua los préstamos en estado `ACTIVO`:
+     - **Vencimiento automático:** Todo préstamo `ACTIVO` cuya `fechaVencimiento <= now()` transiciona automáticamente a `VENCIDO` (`LoanStateMachine`), genera una entidad `Notificacion` con `tipo = PRESTAMO_VENCIDO` y despacha un aviso por correo electrónico al titular informando el cierre del acceso.
+     - **Alerta temprana 24h (`enviarRecordatorio()`):** Todo préstamo `ACTIVO` cuya `fechaVencimiento` se encuentre dentro de las próximas 24 horas (`now() < fechaVencimiento <= now() + 24h`) y que aún no posea una notificación de tipo `PROXIMO_VENCIMIENTO_24H` genera dicho registro en la tabla `notificaciones` y envía el correo electrónico de recordatorio al estudiante/docente.
+  2. **Idempotencia de avisos:** El sistema garantiza que no se envíen múltiples recordatorios duplicados de 24 horas (`PROXIMO_VENCIMIENTO_24H`) ni múltiples avisos de vencimiento (`PRESTAMO_VENCIDO`) para un mismo préstamo.
+  3. **Bandeja de notificaciones en plataforma:** El usuario autenticado puede consultar sus notificaciones (`GET /api/v1/notificaciones`), filtrarlas por estado de lectura (`leida`) o tipo (`tipo`) y marcarlas como leídas individual o masivamente (`PATCH /api/v1/notificaciones/:id/leida`, `PATCH /api/v1/notificaciones/marcar-todas-leidas`).
+- **Escenario 1: Aviso automático 24 horas antes del vencimiento (`RF06`)**
+  - **Given** un préstamo en estado `ACTIVO` que vence en menos de 24 horas y sin notificación `PROXIMO_VENCIMIENTO_24H` previa
+  - **When** se ejecuta el job programado de control de vigencia
+  - **Then** el sistema crea la notificación `PROXIMO_VENCIMIENTO_24H` (`leida = false`) y envía el correo electrónico de recordatorio al usuario titular.
+- **Escenario 2: Transición automática a `VENCIDO` y notificación de cierre**
+  - **Given** un préstamo en estado `ACTIVO` cuya `fechaVencimiento <= now()`
+  - **When** se ejecuta el job programado de vencimiento automático
+  - **Then** el préstamo cambia a estado `VENCIDO`, se registra la notificación `PRESTAMO_VENCIDO` y se envía el correo de finalización del préstamo.
+- **Escenario 3: Consulta y lectura de notificaciones por el usuario**
+  - **Given** un usuario autenticado con notificaciones pendientes (`leida = false`)
+  - **When** consulta `GET /api/v1/notificaciones` y luego ejecuta `PATCH /api/v1/notificaciones/:id/leida`
+  - **Then** el sistema actualiza `leida = true` y decrementa el contador `noLeidas` del usuario.
