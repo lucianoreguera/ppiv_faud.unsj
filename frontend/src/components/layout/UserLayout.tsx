@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, Menu, X } from 'lucide-react';
+import { ArrowLeft, LogIn, LogOut, Menu, X } from 'lucide-react';
 import { BrandMark, BrandWordmark } from './Brand';
-import { SESSION_USER } from '../../mocks/figma-fixtures';
+import { useAuth } from '../../context/AuthContext';
+import { buildLoginPath } from '../../routes/auth-redirect';
 
 /**
  * Layout del alumno / usuario departamental.
@@ -19,14 +20,31 @@ const NAV_ITEMS = [
 const isCatalogSection = (pathname: string) =>
   pathname.startsWith('/catalogo') || pathname.startsWith('/documentos');
 
+const getInitials = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]!.toUpperCase())
+    .join('');
+
 export const UserLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const theme: NavTheme = location.pathname.startsWith('/mis-prestamos') ? 'dark' : 'light';
   const isDocumentDetail = location.pathname.startsWith('/documentos/');
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  const sessionLabel = user ? `${user.nombre} · ${user.departamento.nombre}` : '';
+  const loginPath = buildLoginPath(`${location.pathname}${location.search}`);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   const desktopLinkClass = (to: string) => {
     const active = to === '/catalogo' ? isCatalogSection(location.pathname) : location.pathname.startsWith(to);
@@ -57,16 +75,29 @@ export const UserLayout: React.FC = () => {
               ))}
             </nav>
             <div className="ml-auto flex items-center gap-10">
-              <span className="inline-flex items-center h-9 px-6 rounded-pill bg-faud-amber-light text-faud-gold-dark text-body font-bold">
-                {SESSION_USER.nombre} · {SESSION_USER.departamento}
-              </span>
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-3 text-body text-faud-text hover:text-faud-ink"
-              >
-                <LogOut className="w-4 h-4 text-faud-gold-dark" />
-                Cerrar sesión
-              </Link>
+              {user ? (
+                <>
+                  <span className="inline-flex items-center h-9 px-6 rounded-pill bg-faud-amber-light text-faud-gold-dark text-body font-bold">
+                    {sessionLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-3 text-body text-faud-text hover:text-faud-ink"
+                  >
+                    <LogOut className="w-4 h-4 text-faud-gold-dark" />
+                    Cerrar sesión
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to={loginPath}
+                  className="inline-flex items-center gap-3 text-body font-bold text-faud-text hover:text-faud-ink"
+                >
+                  <LogIn className="w-4 h-4 text-faud-gold-dark" />
+                  Iniciar sesión
+                </Link>
+              )}
             </div>
           </div>
 
@@ -115,13 +146,25 @@ export const UserLayout: React.FC = () => {
                 </NavLink>
               ))}
             </nav>
-            <div className="flex items-center justify-end pr-6">
-              <span
-                title={`${SESSION_USER.nombre} · ${SESSION_USER.departamento}`}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-faud-ink border-[1.5px] border-faud-amber text-white text-caption font-bold"
-              >
-                {SESSION_USER.iniciales}
-              </span>
+            <div className="flex items-center justify-end gap-6 pr-6">
+              {user && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-2 text-body text-faud-text-cream hover:text-white"
+                  >
+                    <LogOut className="w-4 h-4 text-faud-amber" />
+                    Cerrar sesión
+                  </button>
+                  <span
+                    title={sessionLabel}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-faud-ink border-[1.5px] border-faud-amber text-white text-caption font-bold"
+                  >
+                    {getInitials(user.nombre)}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -151,9 +194,11 @@ export const UserLayout: React.FC = () => {
             className="bg-white border-b border-faud-border-warm px-5 py-4 space-y-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="pb-3 mb-2 border-b border-faud-border-warm text-caption text-faud-muted">
-              {SESSION_USER.nombre} · {SESSION_USER.departamento}
-            </p>
+            {user && (
+              <p className="pb-3 mb-2 border-b border-faud-border-warm text-caption text-faud-muted">
+                {sessionLabel}
+              </p>
+            )}
             {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
@@ -165,10 +210,21 @@ export const UserLayout: React.FC = () => {
                 {item.label}
               </NavLink>
             ))}
-            <Link to="/login" className="flex items-center gap-2 py-2.5 text-body text-faud-text">
-              <LogOut className="w-4 h-4 text-faud-gold-dark" />
-              Cerrar sesión
-            </Link>
+            {user ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-2 py-2.5 text-body text-faud-text"
+              >
+                <LogOut className="w-4 h-4 text-faud-gold-dark" />
+                Cerrar sesión
+              </button>
+            ) : (
+              <Link to={loginPath} className="flex items-center gap-2 py-2.5 text-body font-bold text-faud-text">
+                <LogIn className="w-4 h-4 text-faud-gold-dark" />
+                Iniciar sesión
+              </Link>
+            )}
           </nav>
         </div>
       )}

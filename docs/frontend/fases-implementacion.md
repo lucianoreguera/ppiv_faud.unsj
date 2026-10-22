@@ -35,7 +35,7 @@ flowchart LR
 
 ---
 
-## Fase 1: Autenticación JWT, Registro Interdepartamental (19 Departamentos) y Guardias de Rol (`RF05`)
+## Fase 1: Autenticación JWT, Registro Interdepartamental (19 Departamentos) y Guardias de Rol (`RF05`) (Completada ✅)
 **Objetivo:** Implementar el flujo completo de sesión y registro territorial de la **página 10 de Figma**, contemplando el estado inicial `PENDIENTE` de validación por Biblioteca y la protección de rutas por rol (`USUARIO` vs. `ADMINISTRADOR`).
 
 - **Entregables técnicos:**
@@ -51,7 +51,7 @@ flowchart LR
     - Redirección a `/login` preservando la ruta de destino (`?redirect=...`) para usuarios no autenticados.
     - Restricción de rutas `/admin/*` exclusivamente a usuarios con `rol === 'ADMINISTRADOR'`.
 - **Criterio de validación:** Flujo probado de punta a punta: registro de usuario departamental -> aviso de estado `PENDIENTE` -> bloqueo en `/login` con `403` -> inicio de sesión exitoso con cuenta `APROBADO` y redirección según rol.
-- **Documento de seguimiento:** `docs/frontend/fase-01-autenticacion-y-departamentos.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-01-autenticacion-y-departamentos.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-01-autenticacion-y-departamentos.md).
 
 ---
 

@@ -38,13 +38,6 @@ export const TIPOS_DOCUMENTO_FORM = [
   'Otros',
 ] as const;
 
-/** Usuaria de la sesión de ejemplo en las vistas del alumno (Figma págs. 11 a 14) */
-export const SESSION_USER = {
-  nombre: 'Ana Pérez',
-  iniciales: 'AP',
-  departamento: 'Jáchal',
-};
-
 export interface CatalogDocumentFixture {
   id: string;
   titulo: string;

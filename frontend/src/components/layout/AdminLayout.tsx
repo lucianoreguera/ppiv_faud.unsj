@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Menu, PanelTop, Square, SquareMinus, User, X } from 'lucide-react';
 import { BrandMark, BrandWordmark } from './Brand';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * Layout del Panel de Administración (Figma págs. 7, 8, 9 y 17)
@@ -15,7 +16,7 @@ const ADMIN_NAV = [
   { to: '/admin/prestamos', label: 'Préstamos', icon: PanelTop, end: false },
 ];
 
-const SidebarContent: React.FC = () => (
+const SidebarContent: React.FC<{ onLogout: () => void }> = ({ onLogout }) => (
   <div className="relative h-full flex flex-col">
     {/* Líneas guía verticales (grid de blueprint, Figma pág. 24) */}
     <span aria-hidden="true" className="absolute inset-y-0 left-[26px] w-px bg-faud-amber/[0.07]" />
@@ -52,13 +53,14 @@ const SidebarContent: React.FC = () => (
 
     <div className="relative mt-auto">
       <div className="mx-7 border-t border-white/10" />
-      <Link
-        to="/login"
-        className="flex items-center gap-4 h-16 px-6 text-[15px] text-faud-text-cream hover:text-white"
+      <button
+        type="button"
+        onClick={onLogout}
+        className="w-full flex items-center gap-4 h-16 px-6 text-[15px] text-faud-text-cream hover:text-white"
       >
         <LogOut className="w-[18px] h-[18px]" strokeWidth={1.75} />
         Cerrar sesión
-      </Link>
+      </button>
       {/* Motivo decorativo inferior (líneas de acento) */}
       <svg aria-hidden="true" className="absolute left-7 bottom-0 w-16 h-6" viewBox="0 0 64 24" fill="none">
         <path d="M0 0l24 24M10 0l24 24M20 0l24 24" stroke="#FFB606" strokeOpacity="0.35" />
@@ -72,15 +74,22 @@ const SidebarContent: React.FC = () => (
 
 export const AdminLayout: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-faud-cream text-faud-text lg:flex">
       {/* Sidebar desktop fijo 240px */}
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-sidebar bg-faud-dark z-30">
-        <SidebarContent />
+        <SidebarContent onLogout={handleLogout} />
       </aside>
 
       {/* Top bar mobile (Figma pág. 17) */}
@@ -101,7 +110,7 @@ export const AdminLayout: React.FC = () => {
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 top-topbar z-30 bg-faud-ink/40" onClick={() => setMenuOpen(false)}>
           <aside className="w-sidebar h-full bg-faud-dark" onClick={(e) => e.stopPropagation()}>
-            <SidebarContent />
+            <SidebarContent onLogout={handleLogout} />
           </aside>
         </div>
       )}

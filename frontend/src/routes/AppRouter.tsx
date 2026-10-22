@@ -14,58 +14,67 @@ import { ViewerPage } from '../pages/user/ViewerPage';
 import { AdminDocumentUploadPage } from '../pages/admin/AdminDocumentUploadPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
 import { AdminLoansPage } from '../pages/admin/AdminLoansPage';
+import { GuestRoute, ProtectedRoute, RoleGuard } from './RouteGuards';
 
 export const AppRouter: React.FC = () => (
   <Routes>
     {/* Introducción al Repositorio FAUD (Figma pág. 4) */}
     <Route path="/" element={<LandingPage />} />
 
-    {/* Flujo de acceso (Figma págs. 5 y 6) */}
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/registro" element={<RegisterPage />} />
+    {/* Flujo de acceso (Figma págs. 5 y 6) — solo visitantes sin sesión */}
+    <Route element={<GuestRoute />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/registro" element={<RegisterPage />} />
+    </Route>
 
-    {/* Experiencia del alumno (Figma págs. 11, 12 y 13) */}
+    {/* Experiencia del alumno (Figma págs. 11, 12 y 13) — Catálogo y Ficha son públicos */}
     <Route element={<UserLayout />}>
       <Route path="/catalogo" element={<CatalogPage />} />
       <Route path="/documentos/:id" element={<DocumentDetailPage />} />
-      <Route path="/mis-prestamos" element={<MyLoansPage />} />
-      <Route
-        path="/notificaciones"
-        element={
-          <PhasePlaceholderPage
-            padded
-            title="Notificaciones"
-            phaseLabel="Fase 3 · RF06"
-            description="Bandeja de avisos: cuenta aprobada, préstamo otorgado, recordatorio 24 horas antes del vencimiento y préstamo vencido o revocado. No forma parte de los prototipos Figma."
-            endpoints={[
-              'GET /api/v1/notificaciones',
-              'PATCH /api/v1/notificaciones/:id/leida',
-              'PATCH /api/v1/notificaciones/marcar-todas-leidas',
-            ]}
-          />
-        }
-      />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/mis-prestamos" element={<MyLoansPage />} />
+        <Route
+          path="/notificaciones"
+          element={
+            <PhasePlaceholderPage
+              padded
+              title="Notificaciones"
+              phaseLabel="Fase 3 · RF06"
+              description="Bandeja de avisos: cuenta aprobada, préstamo otorgado, recordatorio 24 horas antes del vencimiento y préstamo vencido o revocado. No forma parte de los prototipos Figma."
+              endpoints={[
+                'GET /api/v1/notificaciones',
+                'PATCH /api/v1/notificaciones/:id/leida',
+                'PATCH /api/v1/notificaciones/marcar-todas-leidas',
+              ]}
+            />
+          }
+        />
+      </Route>
     </Route>
 
-    {/* Visor de lectura protegido (Figma pág. 14) */}
-    <Route path="/visor/:prestamoId" element={<ViewerPage />} />
+    <Route element={<ProtectedRoute />}>
+      {/* Visor de lectura protegido (Figma pág. 14) */}
+      <Route path="/visor/:prestamoId" element={<ViewerPage />} />
 
-    {/* Panel de administración (Figma págs. 7, 8 y 9) */}
-    <Route path="/admin" element={<AdminLayout />}>
-      <Route
-        index
-        element={
-          <PhasePlaceholderPage
-            title="Panel"
-            phaseLabel="Fase 5"
-            description="Resumen operativo de Biblioteca: cuentas pendientes de validación, documentos catalogados y préstamos por vencer en 24h. No forma parte de los prototipos Figma."
-            endpoints={['GET /api/v1/usuarios', 'GET /api/v1/prestamos', 'GET /api/v1/departamentos/metricas']}
+      {/* Panel de administración (Figma págs. 7, 8 y 9) — exclusivo ADMINISTRADOR */}
+      <Route element={<RoleGuard roles={['ADMINISTRADOR']} />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route
+            index
+            element={
+              <PhasePlaceholderPage
+                title="Panel"
+                phaseLabel="Fase 5"
+                description="Resumen operativo de Biblioteca: cuentas pendientes de validación, documentos catalogados y préstamos por vencer en 24h. No forma parte de los prototipos Figma."
+                endpoints={['GET /api/v1/usuarios', 'GET /api/v1/prestamos', 'GET /api/v1/departamentos/metricas']}
+              />
+            }
           />
-        }
-      />
-      <Route path="catalogo" element={<AdminDocumentUploadPage />} />
-      <Route path="usuarios" element={<AdminUsersPage />} />
-      <Route path="prestamos" element={<AdminLoansPage />} />
+          <Route path="catalogo" element={<AdminDocumentUploadPage />} />
+          <Route path="usuarios" element={<AdminUsersPage />} />
+          <Route path="prestamos" element={<AdminLoansPage />} />
+        </Route>
+      </Route>
     </Route>
 
     {/* Verificación interna: Design System + GET /api/v1/health */}
