@@ -24,4 +24,9 @@ export default () => ({
       process.env.SMTP_FROM ??
       'Biblioteca FAUD-UNSJ <biblioteca@faud.unsj.edu.ar>',
   },
+  throttle: {
+    ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
+    limit: parseInt(process.env.THROTTLE_LIMIT ?? '100', 10),
+    authLimit: parseInt(process.env.THROTTLE_AUTH_LIMIT ?? '15', 10),
+  },
 });

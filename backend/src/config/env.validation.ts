@@ -79,6 +79,24 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SMTP_FROM: string = 'Biblioteca FAUD-UNSJ <biblioteca@faud.unsj.edu.ar>';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  @IsOptional()
+  THROTTLE_TTL_MS: number = 60000;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  THROTTLE_LIMIT: number = 100;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  THROTTLE_AUTH_LIMIT: number = 15;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

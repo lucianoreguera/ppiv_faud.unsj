@@ -1,0 +1,3728 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/notificaciones": {
+      "get": {
+        "description": "Devuelve la bandeja de notificaciones del estudiante/docente autenticado (`PRESTAMO_OTORGADO`, `PROXIMO_VENCIMIENTO_24H`, `PRESTAMO_VENCIDO`, `PRESTAMO_REVOCADO`), filtrable por estado de lectura (`leida`), `tipo` o `prestamoId`, junto con los contadores globales (`noLeidas`, `leidas`, `porTipo`).",
+        "operationId": "NotificationsController_findMyNotifications",
+        "parameters": [
+          {
+            "name": "leida",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones por estado de lectura (true = leídas, false = no leídas)",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones por su tipo de evento",
+            "schema": {
+              "example": "PROXIMO_VENCIMIENTO_24H",
+              "type": "string",
+              "enum": [
+                "CUENTA_APROBADA",
+                "PRESTAMO_OTORGADO",
+                "PROXIMO_VENCIMIENTO_24H",
+                "PRESTAMO_VENCIDO",
+                "PRESTAMO_REVOCADO"
+              ]
+            }
+          },
+          {
+            "name": "prestamoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones vinculadas a un préstamo específico",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (comenzando en 1)",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Cantidad de notificaciones por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bandeja de notificaciones del usuario y contadores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT de sesión ausente o inválido."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Listar las notificaciones del usuario autenticado con contadores de lectura (RF06)",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/notificaciones/admin": {
+      "get": {
+        "description": "Permite al Administrador de Biblioteca auditar todas las notificaciones emitidas y filtrarlas por usuario, préstamo, tipo o estado de lectura.",
+        "operationId": "NotificationsController_findAllForAdmin",
+        "parameters": [
+          {
+            "name": "leida",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones por estado de lectura (true = leídas, false = no leídas)",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones por su tipo de evento",
+            "schema": {
+              "example": "PROXIMO_VENCIMIENTO_24H",
+              "type": "string",
+              "enum": [
+                "CUENTA_APROBADA",
+                "PRESTAMO_OTORGADO",
+                "PROXIMO_VENCIMIENTO_24H",
+                "PRESTAMO_VENCIDO",
+                "PRESTAMO_REVOCADO"
+              ]
+            }
+          },
+          {
+            "name": "prestamoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones vinculadas a un préstamo específico",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (comenzando en 1)",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Cantidad de notificaciones por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "usuarioId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar notificaciones pertenecientes a un usuario específico (solo Admin)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado global de notificaciones y contadores.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsListResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Listar historial global de notificaciones enviadas en el sistema (RF06 - Solo Admin)",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/notificaciones/marcar-todas-leidas": {
+      "patch": {
+        "operationId": "NotificationsController_markAllAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Cantidad de notificaciones actualizadas a leida = true.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkAllNotificationsReadResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Marcar todas las notificaciones pendientes del usuario autenticado como leídas (RF06)",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/notificaciones/ejecutar-control-vigencia": {
+      "post": {
+        "description": "Dispara inmediatamente los dos procesos programados del **Diagrama de Actividades (Figura 4)**: (1) pasa de `ACTIVO` a `VENCIDO` todos los préstamos cuya `fechaVencimiento <= now()`, registrando `PRESTAMO_VENCIDO` y enviando el email de cierre; (2) identifica los préstamos `ACTIVO` que vencen en las próximas 24 horas sin aviso previo y ejecuta `enviarRecordatorio()` (`PROXIMO_VENCIMIENTO_24H` + email en Mailpit/SMTP).",
+        "operationId": "NotificationsController_triggerControlVigencia",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resumen detallado de préstamos vencidos procesados, alertas tempranas de 24h generadas y correos despachados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CronExecutionSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Ejecutar bajo demanda el ciclo de Control Continuo de Vigencia y Alertas 24h (Figura 4 — RF06, Solo Admin)",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/notificaciones/{id}": {
+      "get": {
+        "operationId": "NotificationsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la notificación",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la notificación y su préstamo asociado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationItemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "La notificación pertenece a otro usuario."
+          },
+          "404": {
+            "description": "Notificación no encontrada."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Obtener el detalle de una notificación por su UUID",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/notificaciones/{id}/leida": {
+      "patch": {
+        "operationId": "NotificationsController_markAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID de la notificación a marcar como leída",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkNotificationReadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notificación actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkNotificationReadResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "La notificación pertenece a otro usuario."
+          },
+          "404": {
+            "description": "Notificación no encontrada."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Marcar una notificación específica como leída (RF06 — PATCH /api/v1/notificaciones/:id/leida)",
+        "tags": [
+          "Notificaciones y Tareas Programadas de Vigencia (RF06)"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Devuelve el estado operativo del Backend, la marca temporal del servidor y el chequeo de conectividad con la base de datos PostgreSQL 16.",
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "El servidor responde correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verificar estado del servidor y conexión a PostgreSQL",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/departamentos": {
+      "get": {
+        "description": "Endpoint público utilizado en el formulario de registro de usuarios (RF05), en los filtros territoriales del catálogo público (RF02) y en las estadísticas de alcance interdepartamental.",
+        "operationId": "DepartmentsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Listado de los 19 departamentos de San Juan con sus métricas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DepartmentResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Listar los 19 departamentos de la provincia de San Juan",
+        "tags": [
+          "Departamentos (San Juan)"
+        ]
+      }
+    },
+    "/api/v1/departamentos/metricas": {
+      "get": {
+        "description": "Consolida el alcance interdepartamental del repositorio diferenciando usuarios de Capital (`esCapital = true`) frente a los 18 departamentos restantes de San Juan.",
+        "operationId": "DepartmentsController_getMetrics",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Métricas territoriales consolidadas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerritorialMetricsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Obtener métricas de distribución territorial (Capital vs. Interior)",
+        "tags": [
+          "Departamentos (San Juan)"
+        ]
+      }
+    },
+    "/api/v1/departamentos/{id}": {
+      "get": {
+        "operationId": "DepartmentsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del departamento de San Juan",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datos y métricas del departamento solicitado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Departamento no encontrado."
+          }
+        },
+        "summary": "Obtener detalle de un departamento por su ID",
+        "tags": [
+          "Departamentos (San Juan)"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Crea una cuenta de usuario asociada a uno de los 19 departamentos de San Juan (RF05). La contraseña se almacena hasheada con bcrypt y la cuenta nace en estado `PENDIENTE` hasta que un Administrador de Biblioteca la apruebe.",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario registrado exitosamente en estado PENDIENTE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos o departamento inexistente."
+          },
+          "409": {
+            "description": "El correo electrónico ya se encuentra registrado."
+          },
+          "429": {
+            "description": "Demasiados intentos de registro desde esta dirección IP (Rate Limit excedido)."
+          }
+        },
+        "summary": "Registrar un nuevo usuario departamental (estado inicial PENDIENTE)",
+        "tags": [
+          "Autenticación y Sesión (RF05)"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Verifica las credenciales y comprueba que la cuenta se encuentre en estado `APROBADO` (RF05). Si la cuenta está `PENDIENTE` o `RECHAZADO`, rechaza el acceso con `403 Forbidden`.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Autenticación exitosa y emisión de JWT.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas (email o contraseña incorrectos)."
+          },
+          "403": {
+            "description": "Cuenta en estado PENDIENTE o RECHAZADO por la Biblioteca FAUD-UNSJ."
+          },
+          "429": {
+            "description": "Demasiados intentos de inicio de sesión desde esta dirección IP (Rate Limit excedido)."
+          }
+        },
+        "summary": "Iniciar sesión y obtener token JWT de sesión",
+        "tags": [
+          "Autenticación y Sesión (RF05)"
+        ]
+      }
+    },
+    "/api/v1/auth/profile": {
+      "get": {
+        "description": "Devuelve la información actualizada del usuario autenticado y su departamento de pertenencia.",
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Perfil del usuario autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido, ausente o expirado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Obtener los datos del perfil del usuario autenticado",
+        "tags": [
+          "Autenticación y Sesión (RF05)"
+        ]
+      }
+    },
+    "/api/v1/usuarios": {
+      "get": {
+        "description": "Permite al Administrador de Biblioteca listar los usuarios registrados por departamento y estado (`PENDIENTE`, `APROBADO`, `RECHAZADO`), devolviendo además los contadores para las pestañas del Panel Admin (Figma pág. 8).",
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado de validación administrativa (PENDIENTE, APROBADO, RECHAZADO)",
+            "schema": {
+              "example": "PENDIENTE",
+              "type": "string",
+              "enum": [
+                "PENDIENTE",
+                "APROBADO",
+                "RECHAZADO"
+              ]
+            }
+          },
+          {
+            "name": "departamentoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por UUID del departamento de San Juan",
+            "schema": {
+              "example": "550e8400-e29b-41d4-a716-446655440000",
+              "type": "string"
+            }
+          },
+          {
+            "name": "rol",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por rol del sistema (USUARIO o ADMINISTRADOR)",
+            "schema": {
+              "example": "USUARIO",
+              "type": "string",
+              "enum": [
+                "USUARIO",
+                "ADMINISTRADOR"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda libre por nombre o correo electrónico",
+            "schema": {
+              "example": "vallefertil",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de usuarios y contadores de validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente."
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Listar usuarios con filtros y contadores por estado (Solo Admin)",
+        "tags": [
+          "Gestión y Validación de Usuarios — Admin Biblioteca (RF05)"
+        ]
+      }
+    },
+    "/api/v1/usuarios/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del usuario a consultar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAdminItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Obtener detalle de un usuario por su UUID (Solo Admin)",
+        "tags": [
+          "Gestión y Validación de Usuarios — Admin Biblioteca (RF05)"
+        ]
+      }
+    },
+    "/api/v1/usuarios/{id}/estado": {
+      "patch": {
+        "description": "Cambia el `estadoValidacion` del usuario (`APROBADO`, `RECHAZADO` o `PENDIENTE`). Al pasar a `APROBADO`, el usuario queda habilitado para iniciar sesión y solicitar préstamos digitales.",
+        "operationId": "UsersController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del usuario a validar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado de validación del usuario actualizado correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserStatusResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Estado inválido o intento de deshabilitar la propia cuenta de administrador."
+          },
+          "404": {
+            "description": "Usuario no encontrado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Aprobar o rechazar la cuenta de un usuario departamental (RF05 - Solo Admin)",
+        "tags": [
+          "Gestión y Validación de Usuarios — Admin Biblioteca (RF05)"
+        ]
+      }
+    },
+    "/api/v1/documentos": {
+      "post": {
+        "description": "Permite al Administrador de Biblioteca subir un archivo PDF (máximo 50 MB) junto con sus metadatos normalizados (`titulo`, `autor`, `director`, `carrera`, `tipo`, `anio`, `departamentoOrigenId`, `palabrasClave`, `resumen`). El PDF se almacena en un directorio privado fuera del alcance público para impedir descargas directas sin préstamo vigente.",
+        "operationId": "CatalogController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentMultipartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Documento catalogado y archivo PDF almacenado de forma privada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentMutationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Archivo ausente, formato distinto de PDF (%PDF-), tamaño superior a 50 MB o metadatos inválidos."
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente."
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Cargar y catalogar un nuevo documento académico en PDF (RF01 - Solo Admin)",
+        "tags": [
+          "Catálogo Académico y Documentos PDF (RF01, RF02)"
+        ]
+      },
+      "get": {
+        "description": "Consulta pública de las obras académicas de la FAUD-UNSJ con filtros combinables: texto libre (`q` en título, autor, director, resumen o palabras clave), `departamentoId` (19 departamentos de San Juan), `carrera`, `tipo`, `anio`, rango `anioDesde`/`anioHasta` y `disponible`. Nunca expone la ruta física ni el binario del PDF.",
+        "operationId": "CatalogController_findAll",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por texto libre en título, autor, director, resumen o palabras clave (RF02)",
+            "schema": {
+              "example": "accesibilidad",
+              "type": "string"
+            }
+          },
+          {
+            "name": "departamentoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por UUID del departamento de San Juan asociado al documento (Figma pág. 11)",
+            "schema": {
+              "example": "550e8400-e29b-41d4-a716-446655440000",
+              "type": "string"
+            }
+          },
+          {
+            "name": "carrera",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por carrera o área académica (ej. Arquitectura, Diseño, Urbanismo)",
+            "schema": {
+              "example": "Arquitectura",
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por tipo de documento (TESIS, MONOGRAFIA, INVESTIGACION, OTROS)",
+            "schema": {
+              "example": "TESIS",
+              "type": "string",
+              "enum": [
+                "TESIS",
+                "MONOGRAFIA",
+                "INVESTIGACION",
+                "OTROS"
+              ]
+            }
+          },
+          {
+            "name": "anio",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por año exacto de publicación",
+            "schema": {
+              "example": 2023,
+              "type": "number"
+            }
+          },
+          {
+            "name": "anioDesde",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar desde un año de publicación (inclusive)",
+            "schema": {
+              "example": 2018,
+              "type": "number"
+            }
+          },
+          {
+            "name": "anioHasta",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar hasta un año de publicación (inclusive)",
+            "schema": {
+              "example": 2024,
+              "type": "number"
+            }
+          },
+          {
+            "name": "disponible",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por estado de disponibilidad del documento en el catálogo (true/false)",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página para paginación (base 1)",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Cantidad de resultados por página (máximo 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 12,
+              "example": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado de fichas bibliográficas del catálogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentsListResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros de filtrado o paginación inválidos."
+          }
+        },
+        "summary": "Buscador público del catálogo académico con filtros combinados y paginación (RF02)",
+        "tags": [
+          "Catálogo Académico y Documentos PDF (RF01, RF02)"
+        ]
+      }
+    },
+    "/api/v1/documentos/{id}": {
+      "get": {
+        "description": "Devuelve todos los metadatos normalizados del documento y el resultado de `estaDisponible()` (Figma pág. 12), sin exponer acceso directo al archivo PDF.",
+        "operationId": "CatalogController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del documento académico",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ficha bibliográfica detallada del documento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Documento académico no encontrado."
+          }
+        },
+        "summary": "Obtener detalle completo de la ficha bibliográfica de un documento (RF02 - Público)",
+        "tags": [
+          "Catálogo Académico y Documentos PDF (RF01, RF02)"
+        ]
+      },
+      "patch": {
+        "description": "Permite al Administrador editar los metadatos bibliográficos, habilitar/suspender la disponibilidad (`disponible: true/false`) o reemplazar el archivo PDF adjunto.",
+        "operationId": "CatalogController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del documento académico a actualizar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documento académico actualizado exitosamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentMutationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de actualización inválidos."
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente."
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          },
+          "404": {
+            "description": "Documento académico no encontrado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Actualizar metadatos o estado de disponibilidad de un documento (RF01 - Solo Admin)",
+        "tags": [
+          "Catálogo Académico y Documentos PDF (RF01, RF02)"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el documento si no posee préstamos activos ni historial comprometido, removiendo también el archivo PDF del almacenamiento privado.",
+        "operationId": "CatalogController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del documento académico a eliminar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documento eliminado correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteDocumentResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT inválido o ausente."
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          },
+          "404": {
+            "description": "Documento académico no encontrado."
+          },
+          "409": {
+            "description": "No se puede eliminar un documento con préstamos activos o historial registrado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Eliminar un documento del catálogo y su archivo PDF privado (RF01 - Solo Admin)",
+        "tags": [
+          "Catálogo Académico y Documentos PDF (RF01, RF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos": {
+      "post": {
+        "description": "Verifica la disponibilidad del documento (`estaDisponible()`), transiciona el estado de `SOLICITADO` a `ACTIVO`, calcula `fechaVencimiento = fechaInicio + 7 días` y firma el `tokenAcceso` JWT específico de DRM (`LOAN_DRM_JWT_SECRET`). Soporta préstamos concurrentes multiusuario e impide préstamos duplicados activos de una misma persona sobre el mismo documento.",
+        "operationId": "LoansController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLoanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Préstamo otorgado en estado ACTIVO junto con el tokenAcceso DRM de 7 días y metadatos de marca de agua.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLoanResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "UUID de documento inválido."
+          },
+          "401": {
+            "description": "Token JWT de sesión ausente o inválido."
+          },
+          "403": {
+            "description": "Cuenta de usuario no aprobada por Biblioteca."
+          },
+          "404": {
+            "description": "El documento académico solicitado no existe."
+          },
+          "409": {
+            "description": "El documento está suspendido por Biblioteca (RECHAZADO) o el usuario ya posee un préstamo ACTIVO vigente sobre este mismo documento."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Solicitar un préstamo digital temporal de 7 días y emitir token DRM (RF03, RF04)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      },
+      "get": {
+        "description": "Devuelve las métricas operativas (`activos`, `porVencer24h`, `vencidosHoy`, `vencidosTotal`, `revocadosTotal`) y el listado paginado filtrable por estado, departamento de San Juan, usuario, documento o búsqueda libre.",
+        "operationId": "LoansController_findAllForAdmin",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar préstamos por estado de la máquina de estados",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SOLICITADO",
+                "ACTIVO",
+                "RECHAZADO",
+                "VENCIDO",
+                "REVOCADO",
+                "CERRADO"
+              ]
+            }
+          },
+          {
+            "name": "departamentoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por UUID del departamento del usuario prestatario (los 19 departamentos de San Juan)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "usuarioId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por UUID del usuario prestatario",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentoId",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar por UUID del documento académico",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "porVencer24h",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar préstamos activos que vencen en las próximas 24 horas (alerta temprana)",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda libre por nombre/email de usuario, título de documento o código de préstamo (#1024)",
+            "schema": {
+              "example": "Jáchal",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Número de página (comenzando en 1)",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Cantidad de préstamos por página",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 15,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Métricas del tablero de préstamos y listado paginado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLoansListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT de sesión ausente o inválido."
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Tablero de control y listado paginado de préstamos para Biblioteca (RF03, RF04 - Solo Admin, Figma pág. 9)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/mis-prestamos": {
+      "get": {
+        "description": "Sincroniza vencimientos y devuelve los préstamos del estudiante/docente autenticado junto con contadores (`activos`, `porVencer24h`, `vencidos`, `revocados`), días/horas restantes y el `tokenAcceso` de los préstamos vigentes.",
+        "operationId": "LoansController_findMyLoans",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "description": "Filtrar los préstamos del usuario autenticado por estado de la máquina de estados",
+            "schema": {
+              "example": "ACTIVO",
+              "type": "string",
+              "enum": [
+                "SOLICITADO",
+                "ACTIVO",
+                "RECHAZADO",
+                "VENCIDO",
+                "REVOCADO",
+                "CERRADO"
+              ]
+            }
+          },
+          {
+            "name": "porVencer24h",
+            "required": false,
+            "in": "query",
+            "description": "Si es true, filtra únicamente los préstamos activos próximos a vencer en las siguientes 24 horas (Figma pág. 13)",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Búsqueda por título, autor o carrera del documento prestado",
+            "schema": {
+              "example": "Vivienda social",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de préstamos del usuario y contadores por estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyLoansListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token JWT de sesión ausente o inválido."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Listar los préstamos del usuario autenticado con cuenta regresiva y alertas (RF03 - Figma pág. 13)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/{id}": {
+      "get": {
+        "operationId": "LoansController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del préstamo a consultar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del préstamo digital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanItemDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El préstamo pertenece a otro usuario."
+          },
+          "404": {
+            "description": "Préstamo no encontrado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Obtener detalle de un préstamo por su UUID (Titular o Admin)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/{id}/revocar": {
+      "patch": {
+        "description": "Ejecuta el método de dominio `revocarAcceso()`: transiciona el préstamo de `ACTIVO` a `REVOCADO` y bloquea inmediatamente cualquier intento de lectura en el visor protegido (`403 Forbidden`), aun cuando el JWT DRM de 7 días no haya expirado.",
+        "operationId": "LoansController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del préstamo a revocar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeLoanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Préstamo revocado exitosamente y acceso DRM bloqueado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanStateTransitionResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acceso restringido exclusivamente al rol ADMINISTRADOR."
+          },
+          "404": {
+            "description": "Préstamo no encontrado."
+          },
+          "409": {
+            "description": "Transición inválida: el préstamo no se encuentra en estado ACTIVO (ya está VENCIDO, REVOCADO, RECHAZADO o CERRADO)."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Revocar manualmente un préstamo activo e invalidar en el acto su acceso al visor PDF (RF04 - Solo Admin)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/{id}/cerrar": {
+      "patch": {
+        "description": "Permite al estudiante devolver anticipadamente un préstamo `ACTIVO` o archivar un préstamo `VENCIDO`/`REVOCADO` pasándolo al estado terminal `CERRADO`.",
+        "operationId": "LoansController_closeLoan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del préstamo a cerrar",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Préstamo pasado a estado CERRADO.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanStateTransitionResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Transición inválida desde el estado actual."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          }
+        ],
+        "summary": "Cerrar/finalizar un préstamo digital (Titular o Admin - Máquina de Estados Figura 5)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/{id}/visor": {
+      "get": {
+        "description": "Verifica la vigencia del token DRM y del préstamo en PostgreSQL (`validarVigencia()`). Si está activo, devuelve los datos del documento, cuenta regresiva, leyenda de marca de agua (`\"Nombre Apellido · Préstamo #Código\"`) y banderas de restricción DRM (`permitirDescarga: false`, `permitirImpresion: false`). Si venció o fue revocado, responde `403 Forbidden`.",
+        "operationId": "LoansController_getViewerMetadata",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del préstamo",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-drm-token",
+            "required": false,
+            "in": "header",
+            "description": "Token DRM temporal alternativo si el header Authorization se usa para el token de sesión.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "description": "Token DRM temporal opcional por query string.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadatos del visor protegido y marca de agua dinámica.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanViewerMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token DRM ausente o criptográficamente inválido."
+          },
+          "403": {
+            "description": "El préstamo ha vencido o fue revocado."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          },
+          {
+            "loan-drm-token": []
+          }
+        ],
+        "summary": "Obtener metadatos de sesión del Visor Protegido con DRM y marca de agua dinámica (RF04 - Figma pág. 14)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/prestamos/{id}/contenido": {
+      "get": {
+        "description": "Verifica la firma y vigencia del `tokenAcceso` DRM de 7 días **y** comprueba en PostgreSQL que el préstamo siga en estado `ACTIVO` y `fechaVencimiento > now()`. Si está vigente, transmite el flujo binario del PDF con encabezados `Content-Disposition: inline`, `Cache-Control: no-store` y `X-DRM-Watermark`. Si venció o fue revocado, responde `403 Forbidden` (`\"El préstamo ha vencido o fue revocado\"`).",
+        "operationId": "LoansController_streamLoanContent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del préstamo digital",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-drm-token",
+            "required": false,
+            "in": "header",
+            "description": "Token DRM temporal de 7 días (alternativo a Authorization).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "description": "Token DRM temporal de 7 días (opcional por query param).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream binario protegido del archivo PDF junto con encabezados X-DRM-Watermark y bloqueo de caché/descarga."
+          },
+          "401": {
+            "description": "Token DRM ausente o firma inválida."
+          },
+          "403": {
+            "description": "El préstamo ha vencido o fue revocado (403 Forbidden)."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          },
+          {
+            "loan-drm-token": []
+          }
+        ],
+        "summary": "Transmitir stream seguro del PDF de un préstamo activo con encabezados DRM (RF04, RNF02)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    },
+    "/api/v1/documentos/{id}/ver": {
+      "get": {
+        "description": "Implementa exactamente el flujo del **Diagrama de Secuencia (Figura 3)** y **Spec 03**: verifica la firma y expiración del JWT temporal (`tokenAcceso`) **y** valida en PostgreSQL (`validarVigencia()`) que el préstamo siga en estado `ACTIVO` y `fechaVencimiento > now()`. Si está vigente, entrega el stream seguro del PDF e inyecta los metadatos de marca de agua dinámica (`X-DRM-Watermark: \"Nombre Apellido · Préstamo #Código\"`). Si el préstamo venció o fue revocado, responde `403 Forbidden` (`\"El préstamo ha vencido o fue revocado\"`).",
+        "operationId": "DocumentViewerController_viewProtectedDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del documento académico a visualizar",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-drm-token",
+            "required": false,
+            "in": "header",
+            "description": "Token DRM temporal de 7 días (alternativo a Authorization).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "description": "Token DRM temporal de 7 días (opcional por query param).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream binario protegido del archivo PDF con encabezados DRM y marca de agua dinámica."
+          },
+          "401": {
+            "description": "Token DRM ausente o firma criptográfica inválida."
+          },
+          "403": {
+            "description": "El préstamo ha vencido o fue revocado (403 Forbidden)."
+          },
+          "404": {
+            "description": "El documento académico no existe."
+          }
+        },
+        "security": [
+          {
+            "jwt-auth": []
+          },
+          {
+            "loan-drm-token": []
+          }
+        ],
+        "summary": "Visualización protegida del documento PDF con validación doble DRM (Figura 3 — RF04, RNF02)",
+        "tags": [
+          "Préstamos Digitales y DRM Temporal 7 Días (RF03, RF04, RNF02)"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Sistema de Préstamo Digital Interdepartamental — FAUD-UNSJ (API)",
+    "description": "Especificación OpenAPI 3.0 del Backend para el Repositorio Digital de la Facultad de Arquitectura, Urbanismo y Diseño (UNSJ). Incluye gestión territorial de los 19 departamentos de San Juan, catálogo académico con almacenamiento privado de PDFs, préstamos temporales a 7 días con DRM (JWT), notificaciones automáticas (RF06) y endurecimiento de seguridad (Helmet + Rate Limiting).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "DHL Solutions — Grupo N°9 (IFTS N°29)",
+      "url": "https://www.faud.unsj.edu.ar",
+      "email": "biblioteca@faud.unsj.edu.ar"
+    }
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "jwt-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Token JWT de sesión emitido en POST /api/v1/auth/login"
+      },
+      "loan-drm-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Token DRM temporal de préstamo (7 días) emitido al otorgar un préstamo"
+      }
+    },
+    "schemas": {
+      "NotificationCountersDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 4
+          },
+          "noLeidas": {
+            "type": "number",
+            "example": 2
+          },
+          "leidas": {
+            "type": "number",
+            "example": 2
+          },
+          "porTipo": {
+            "type": "object",
+            "description": "Desglose de notificaciones por TipoNotificacion",
+            "example": {
+              "CUENTA_APROBADA": 0,
+              "PRESTAMO_OTORGADO": 2,
+              "PROXIMO_VENCIMIENTO_24H": 1,
+              "PRESTAMO_VENCIDO": 1,
+              "PRESTAMO_REVOCADO": 0
+            }
+          }
+        },
+        "required": [
+          "total",
+          "noLeidas",
+          "leidas",
+          "porTipo"
+        ]
+      },
+      "NotificationsPaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 4
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "NotificationLoanUserSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ana Pérez"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar"
+          },
+          "departamentoNombre": {
+            "type": "string",
+            "example": "Jáchal"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "email",
+          "departamentoNombre"
+        ]
+      },
+      "NotificationLoanDocumentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Vivienda social en Cuyo"
+          },
+          "autor": {
+            "type": "string",
+            "example": "L. Martínez"
+          },
+          "carrera": {
+            "type": "string",
+            "example": "Arquitectura"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TESIS",
+              "MONOGRAFIA",
+              "INVESTIGACION",
+              "OTROS"
+            ],
+            "example": "INVESTIGACION"
+          },
+          "anio": {
+            "type": "number",
+            "example": 2021
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "autor",
+          "carrera",
+          "tipo",
+          "anio"
+        ]
+      },
+      "NotificationLoanSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+          },
+          "codigoReferencia": {
+            "type": "number",
+            "example": 1024
+          },
+          "codigoFormateado": {
+            "type": "string",
+            "example": "#1024"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "SOLICITADO",
+              "ACTIVO",
+              "RECHAZADO",
+              "VENCIDO",
+              "REVOCADO",
+              "CERRADO"
+            ],
+            "example": "ACTIVO"
+          },
+          "fechaInicio": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-16T10:00:00.000Z"
+          },
+          "fechaVencimiento": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-23T10:00:00.000Z"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/NotificationLoanUserSummaryDto"
+          },
+          "documento": {
+            "$ref": "#/components/schemas/NotificationLoanDocumentSummaryDto"
+          }
+        },
+        "required": [
+          "id",
+          "codigoReferencia",
+          "codigoFormateado",
+          "estado",
+          "fechaInicio",
+          "fechaVencimiento",
+          "usuario",
+          "documento"
+        ]
+      },
+      "NotificationItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "b3d21480-9a21-4e7b-b831-98a472e1c301"
+          },
+          "prestamoId": {
+            "type": "string",
+            "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "CUENTA_APROBADA",
+              "PRESTAMO_OTORGADO",
+              "PROXIMO_VENCIMIENTO_24H",
+              "PRESTAMO_VENCIDO",
+              "PRESTAMO_REVOCADO"
+            ],
+            "example": "PROXIMO_VENCIMIENTO_24H"
+          },
+          "mensaje": {
+            "type": "object",
+            "nullable": true,
+            "example": "Recordatorio de vencimiento (24h): El préstamo #1024 sobre \"Vivienda social en Cuyo\" vencerá en 18 hora(s)."
+          },
+          "fechaEnvio": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-22T10:00:00.000Z"
+          },
+          "leida": {
+            "type": "boolean",
+            "example": false
+          },
+          "prestamo": {
+            "$ref": "#/components/schemas/NotificationLoanSummaryDto"
+          }
+        },
+        "required": [
+          "id",
+          "prestamoId",
+          "tipo",
+          "fechaEnvio",
+          "leida",
+          "prestamo"
+        ]
+      },
+      "NotificationsListResponseDto": {
+        "type": "object",
+        "properties": {
+          "contadores": {
+            "$ref": "#/components/schemas/NotificationCountersDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/NotificationsPaginationMetaDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationItemDto"
+            }
+          }
+        },
+        "required": [
+          "contadores",
+          "meta",
+          "items"
+        ]
+      },
+      "MarkAllNotificationsReadResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Se marcaron 3 notificación(es) como leídas."
+          },
+          "actualizadas": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "message",
+          "actualizadas"
+        ]
+      },
+      "CronProcessedLoanItemDto": {
+        "type": "object",
+        "properties": {
+          "prestamoId": {
+            "type": "string",
+            "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+          },
+          "codigoFormateado": {
+            "type": "string",
+            "example": "#1024"
+          },
+          "usuarioEmail": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar"
+          },
+          "usuarioNombre": {
+            "type": "string",
+            "example": "Ana Pérez"
+          },
+          "departamentoNombre": {
+            "type": "string",
+            "example": "Jáchal"
+          },
+          "documentoTitulo": {
+            "type": "string",
+            "example": "Vivienda social en Cuyo"
+          },
+          "fechaVencimiento": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-23T10:00:00.000Z"
+          },
+          "tipoNotificacion": {
+            "type": "string",
+            "enum": [
+              "CUENTA_APROBADA",
+              "PRESTAMO_OTORGADO",
+              "PROXIMO_VENCIMIENTO_24H",
+              "PRESTAMO_VENCIDO",
+              "PRESTAMO_REVOCADO"
+            ]
+          },
+          "notificacionId": {
+            "type": "string",
+            "example": "b3d21480-9a21-4e7b-b831-98a472e1c301"
+          },
+          "correoEnviado": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "prestamoId",
+          "codigoFormateado",
+          "usuarioEmail",
+          "usuarioNombre",
+          "departamentoNombre",
+          "documentoTitulo",
+          "fechaVencimiento",
+          "tipoNotificacion",
+          "notificacionId",
+          "correoEnviado"
+        ]
+      },
+      "CronExecutionSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Ciclo de control continuo de vigencia y notificaciones ejecutado correctamente (Figura 4 — RF06)."
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-22T10:35:00.000Z"
+          },
+          "prestamosVencidosProcesados": {
+            "type": "number",
+            "description": "Cantidad de préstamos que cumplieron los 7 días y pasaron de ACTIVO a VENCIDO",
+            "example": 1
+          },
+          "alertas24hGeneradas": {
+            "type": "number",
+            "description": "Cantidad de recordatorios tempranos (24h antes del vencimiento) generados",
+            "example": 1
+          },
+          "correosEnviados": {
+            "type": "number",
+            "description": "Cantidad de correos electrónicos despachados exitosamente vía SMTP / Mailpit",
+            "example": 2
+          },
+          "detalleVencidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CronProcessedLoanItemDto"
+            }
+          },
+          "detalleAlertas24h": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CronProcessedLoanItemDto"
+            }
+          }
+        },
+        "required": [
+          "message",
+          "timestamp",
+          "prestamosVencidosProcesados",
+          "alertas24hGeneradas",
+          "correosEnviados",
+          "detalleVencidos",
+          "detalleAlertas24h"
+        ]
+      },
+      "MarkNotificationReadDto": {
+        "type": "object",
+        "properties": {
+          "leida": {
+            "type": "boolean",
+            "description": "Estado de lectura a establecer sobre la notificación (por defecto true)",
+            "default": true,
+            "example": true
+          }
+        }
+      },
+      "MarkNotificationReadResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "La notificación fue marcada como leída correctamente."
+          },
+          "notificacion": {
+            "$ref": "#/components/schemas/NotificationItemDto"
+          }
+        },
+        "required": [
+          "message",
+          "notificacion"
+        ]
+      },
+      "DatabaseHealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "up",
+            "description": "Estado de la conexión con PostgreSQL 16",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "latencyMs": {
+            "type": "number",
+            "example": 4,
+            "description": "Tiempo de respuesta de la base de datos en milisegundos"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "HealthResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "description": "Estado general del servidor Backend",
+            "enum": [
+              "ok",
+              "degraded"
+            ]
+          },
+          "service": {
+            "type": "string",
+            "example": "Sistema de Préstamo Digital Interdepartamental — FAUD-UNSJ",
+            "description": "Nombre del servicio"
+          },
+          "version": {
+            "type": "string",
+            "example": "0.1.0",
+            "description": "Versión actual de la API"
+          },
+          "environment": {
+            "type": "string",
+            "example": "development",
+            "description": "Entorno de ejecución activo"
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-10-21T19:45:00.000Z",
+            "description": "Marca temporal ISO 8601 del servidor"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 12.45,
+            "description": "Tiempo de actividad del proceso en segundos"
+          },
+          "database": {
+            "description": "Estado de conectividad con PostgreSQL",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseHealthDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "version",
+          "environment",
+          "timestamp",
+          "uptimeSeconds",
+          "database"
+        ]
+      },
+      "DepartmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "Identificador único UUID del departamento"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Jáchal",
+            "description": "Nombre oficial del departamento de la provincia de San Juan"
+          },
+          "esCapital": {
+            "type": "boolean",
+            "example": false,
+            "description": "Indica si corresponde al departamento Capital (true) o a un departamento del interior/gran San Juan (false)"
+          },
+          "totalUsuarios": {
+            "type": "number",
+            "example": 3,
+            "description": "Cantidad total de usuarios registrados en este departamento"
+          },
+          "usuariosAprobados": {
+            "type": "number",
+            "example": 2,
+            "description": "Cantidad de usuarios con cuenta APROBADA en este departamento"
+          },
+          "usuariosPendientes": {
+            "type": "number",
+            "example": 1,
+            "description": "Cantidad de usuarios con cuenta PENDIENTE de validación en este departamento"
+          },
+          "totalDocumentos": {
+            "type": "number",
+            "example": 1,
+            "description": "Cantidad de documentos académicos asociados a este departamento de origen"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "esCapital",
+          "totalUsuarios",
+          "usuariosAprobados",
+          "usuariosPendientes",
+          "totalDocumentos"
+        ]
+      },
+      "TerritorialMetricsResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalDepartamentos": {
+            "type": "number",
+            "example": 19,
+            "description": "Cantidad oficial de departamentos de la provincia de San Juan"
+          },
+          "totalUsuariosProvincia": {
+            "type": "number",
+            "example": 6,
+            "description": "Total de usuarios registrados en todo el territorio provincial"
+          },
+          "usuariosCapital": {
+            "type": "number",
+            "example": 1,
+            "description": "Total de usuarios registrados en el departamento Capital"
+          },
+          "usuariosDepartamentosAlejados": {
+            "type": "number",
+            "example": 5,
+            "description": "Total de usuarios registrados en los 18 departamentos fuera de Capital (alcance interdepartamental)"
+          },
+          "totalDocumentosCatalogados": {
+            "type": "number",
+            "example": 4,
+            "description": "Total de documentos catalogados en el repositorio"
+          },
+          "departamentos": {
+            "description": "Desglose detallado por cada uno de los 19 departamentos",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentResponseDto"
+            }
+          }
+        },
+        "required": [
+          "totalDepartamentos",
+          "totalUsuariosProvincia",
+          "usuariosCapital",
+          "usuariosDepartamentosAlejados",
+          "totalDocumentosCatalogados",
+          "departamentos"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "example": "Ramiro Quiroga",
+            "description": "Nombre y apellido completo del solicitante"
+          },
+          "email": {
+            "type": "string",
+            "example": "ramiro.quiroga@jachal.gov.ar",
+            "description": "Correo electrónico institucional o personal (único)"
+          },
+          "password": {
+            "type": "string",
+            "example": "Alumno123!",
+            "description": "Contraseña de acceso (mínimo 6 caracteres)",
+            "minLength": 6
+          },
+          "departamentoId": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "UUID del departamento de San Juan al que pertenece el usuario (RF05)"
+          }
+        },
+        "required": [
+          "nombre",
+          "email",
+          "password",
+          "departamentoId"
+        ]
+      },
+      "UserDepartmentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "UUID del departamento"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Jáchal",
+            "description": "Nombre del departamento de San Juan"
+          },
+          "esCapital": {
+            "type": "boolean",
+            "example": false,
+            "description": "Indica si es Capital (true) o interior/gran San Juan (false)"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "esCapital"
+        ]
+      },
+      "UserProfileResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a3b8f042-1c2a-4d5e-8f90-123456789abc",
+            "description": "Identificador único UUID del usuario"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ana Pérez",
+            "description": "Nombre y apellido del usuario"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar",
+            "description": "Correo electrónico del usuario"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "USUARIO",
+              "ADMINISTRADOR"
+            ],
+            "example": "USUARIO",
+            "description": "Rol dentro del sistema (USUARIO o ADMINISTRADOR)"
+          },
+          "estadoValidacion": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ],
+            "example": "APROBADO",
+            "description": "Estado de validación administrativa por Biblioteca (PENDIENTE, APROBADO, RECHAZADO)"
+          },
+          "departamentoId": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "UUID del departamento asociado"
+          },
+          "departamento": {
+            "description": "Datos del departamento de residencia",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDepartmentSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z",
+            "description": "Fecha de alta en el sistema"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z",
+            "description": "Fecha de última actualización"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "email",
+          "rol",
+          "estadoValidacion",
+          "departamentoId",
+          "departamento",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RegisterResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Registro exitoso. Su cuenta se encuentra PENDIENTE de validación por parte de la Biblioteca FAUD-UNSJ.",
+            "description": "Mensaje informativo sobre el estado inicial de la cuenta"
+          },
+          "usuario": {
+            "description": "Datos del usuario recién registrado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserProfileResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "message",
+          "usuario"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar",
+            "description": "Correo electrónico registrado del usuario o administrador"
+          },
+          "password": {
+            "type": "string",
+            "example": "Alumno123!",
+            "description": "Contraseña de la cuenta"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "description": "Token JWT de sesión para autenticar peticiones (Bearer)"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer",
+            "description": "Esquema de autenticación HTTP"
+          },
+          "expiresIn": {
+            "type": "string",
+            "example": "8h",
+            "description": "Tiempo de vigencia configurado para la sesión"
+          },
+          "usuario": {
+            "description": "Perfil del usuario autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserProfileResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "usuario"
+        ]
+      },
+      "UserStatusCountersDto": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "number",
+            "example": 6,
+            "description": "Total de usuarios registrados en el sistema"
+          },
+          "pendientes": {
+            "type": "number",
+            "example": 3,
+            "description": "Usuarios en estado PENDIENTE aguardando validación de Biblioteca (pestaña Pendientes en Figma)"
+          },
+          "aprobados": {
+            "type": "number",
+            "example": 3,
+            "description": "Usuarios con cuenta APROBADA"
+          },
+          "rechazados": {
+            "type": "number",
+            "example": 0,
+            "description": "Usuarios con solicitud RECHAZADA"
+          }
+        },
+        "required": [
+          "todos",
+          "pendientes",
+          "aprobados",
+          "rechazados"
+        ]
+      },
+      "UserAdminItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a3b8f042-1c2a-4d5e-8f90-123456789abc",
+            "description": "Identificador único UUID del usuario"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ana Pérez",
+            "description": "Nombre y apellido del usuario"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar",
+            "description": "Correo electrónico del usuario"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "USUARIO",
+              "ADMINISTRADOR"
+            ],
+            "example": "USUARIO",
+            "description": "Rol dentro del sistema (USUARIO o ADMINISTRADOR)"
+          },
+          "estadoValidacion": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ],
+            "example": "APROBADO",
+            "description": "Estado de validación administrativa por Biblioteca (PENDIENTE, APROBADO, RECHAZADO)"
+          },
+          "departamentoId": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "UUID del departamento asociado"
+          },
+          "departamento": {
+            "description": "Datos del departamento de residencia",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDepartmentSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z",
+            "description": "Fecha de alta en el sistema"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z",
+            "description": "Fecha de última actualización"
+          },
+          "totalPrestamos": {
+            "type": "number",
+            "example": 2,
+            "description": "Cantidad histórica de préstamos asociados al usuario"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "email",
+          "rol",
+          "estadoValidacion",
+          "departamentoId",
+          "departamento",
+          "createdAt",
+          "updatedAt",
+          "totalPrestamos"
+        ]
+      },
+      "UsersListResponseDto": {
+        "type": "object",
+        "properties": {
+          "contadores": {
+            "description": "Contadores globales por estado de validación para las pestañas del Panel Admin de Biblioteca",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserStatusCountersDto"
+              }
+            ]
+          },
+          "total": {
+            "type": "number",
+            "example": 3,
+            "description": "Total de registros que coinciden con los filtros aplicados"
+          },
+          "items": {
+            "description": "Listado de usuarios filtrados",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserAdminItemDto"
+            }
+          }
+        },
+        "required": [
+          "contadores",
+          "total",
+          "items"
+        ]
+      },
+      "UpdateUserStatusDto": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ],
+            "example": "APROBADO",
+            "description": "Nuevo estado de validación para la cuenta del usuario (APROBADO, RECHAZADO o PENDIENTE)"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Documentación y pertenencia departamental verificadas por Biblioteca FAUD.",
+            "description": "Observación o motivo opcional de la aprobación/rechazo administrativo"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "UpdateUserStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "El estado de validación del usuario Carlos Gómez (Valle Fértil) fue actualizado a APROBADO.",
+            "description": "Mensaje de confirmación de la acción administrativa"
+          },
+          "estadoAnterior": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ],
+            "example": "PENDIENTE",
+            "description": "Estado previo de la cuenta"
+          },
+          "estadoActual": {
+            "type": "string",
+            "enum": [
+              "PENDIENTE",
+              "APROBADO",
+              "RECHAZADO"
+            ],
+            "example": "APROBADO",
+            "description": "Nuevo estado asignado a la cuenta"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Pertenencia departamental verificada.",
+            "description": "Observación administrativa opcional"
+          },
+          "usuario": {
+            "description": "Datos actualizados del usuario",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserAdminItemDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "message",
+          "estadoAnterior",
+          "estadoActual",
+          "usuario"
+        ]
+      },
+      "CreateDocumentMultipartDto": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "description": "Título completo de la obra académica",
+            "example": "Arquitectura sustentable en el Valle de Calingasta"
+          },
+          "autor": {
+            "type": "string",
+            "description": "Autor o autores principales del documento",
+            "example": "Arq. Mariana Lucero"
+          },
+          "director": {
+            "type": "string",
+            "description": "Director o codirector de tesis/investigación",
+            "example": "Dr. Arq. Roberto Sánchez"
+          },
+          "carrera": {
+            "type": "string",
+            "description": "Carrera o área académica de la FAUD-UNSJ (ej. Arquitectura, Diseño, Urbanismo)",
+            "example": "Arquitectura"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TESIS",
+              "MONOGRAFIA",
+              "INVESTIGACION",
+              "OTROS"
+            ],
+            "description": "Tipo de producción académica (TESIS, MONOGRAFIA, INVESTIGACION, OTROS)",
+            "example": "TESIS"
+          },
+          "anio": {
+            "type": "number",
+            "description": "Año de publicación o defensa del documento",
+            "example": 2024,
+            "minimum": 1950,
+            "maximum": 2100
+          },
+          "resumen": {
+            "type": "string",
+            "description": "Resumen académico (abstract) del documento",
+            "example": "Análisis de estrategias bioclimáticas y constructivas en tierra aplicadas a equipamientos comunitarios en el departamento de Calingasta."
+          },
+          "palabrasClave": {
+            "description": "Palabras clave normalizadas (acepta arreglo de strings o lista separada por comas en multipart/form-data)",
+            "example": [
+              "sustentabilidad",
+              "Calingasta",
+              "bioclimática",
+              "tierra cruda"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "departamentoOrigenId": {
+            "type": "string",
+            "description": "UUID del departamento de San Juan vinculado a la temática u origen del documento",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Indica si el documento se encuentra habilitado por Biblioteca para préstamos digitales",
+            "default": true,
+            "example": true
+          },
+          "archivo": {
+            "type": "string",
+            "format": "binary",
+            "description": "Archivo digital en formato PDF (tamaño máximo: 50 MB)"
+          }
+        },
+        "required": [
+          "titulo",
+          "autor",
+          "carrera",
+          "tipo",
+          "anio",
+          "resumen",
+          "palabrasClave",
+          "archivo"
+        ]
+      },
+      "DocumentDepartmentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Jáchal"
+          },
+          "esCapital": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "esCapital"
+        ]
+      },
+      "DocumentItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID del documento académico",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+          },
+          "titulo": {
+            "type": "string",
+            "description": "Título completo de la obra",
+            "example": "Vivienda social en Cuyo"
+          },
+          "autor": {
+            "type": "string",
+            "description": "Autor o autores del documento",
+            "example": "L. Martínez"
+          },
+          "director": {
+            "type": "object",
+            "description": "Director o codirector de tesis/investigación",
+            "example": "Mg. Arq. Claudia Quiroga",
+            "nullable": true
+          },
+          "carrera": {
+            "type": "string",
+            "description": "Carrera o área académica en la FAUD-UNSJ",
+            "example": "Arquitectura"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TESIS",
+              "MONOGRAFIA",
+              "INVESTIGACION",
+              "OTROS"
+            ],
+            "description": "Tipo de producción académica",
+            "example": "INVESTIGACION"
+          },
+          "anio": {
+            "type": "number",
+            "description": "Año de publicación o defensa",
+            "example": 2021
+          },
+          "resumen": {
+            "type": "string",
+            "description": "Resumen académico (abstract) del documento",
+            "example": "Investigación aplicada sobre tipologías de vivienda de interés social adaptadas a las condiciones climáticas y culturales de los valles del norte sanjuanino."
+          },
+          "palabrasClave": {
+            "description": "Palabras clave normalizadas para indexación y búsqueda",
+            "example": [
+              "vivienda social",
+              "Cuyo",
+              "hábitat rural",
+              "Jáchal"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Estado administrativo del documento en Biblioteca (habilitado o suspendido)",
+            "example": true
+          },
+          "estaDisponible": {
+            "type": "boolean",
+            "description": "Resultado del método de dominio estaDisponible() (Diagrama de Clases Fig. 2). En modalidad digital multiusuario, indica si el documento admite nuevas solicitudes de préstamo.",
+            "example": true
+          },
+          "departamentoOrigenId": {
+            "type": "object",
+            "description": "UUID del departamento de San Juan asociado al documento",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "nullable": true
+          },
+          "departamentoOrigen": {
+            "nullable": true,
+            "description": "Datos del departamento territorial asociado al documento",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DocumentDepartmentSummaryDto"
+              }
+            ]
+          },
+          "prestamosActivosCount": {
+            "type": "number",
+            "description": "Cantidad de préstamos digitales concurrentes actualmente en estado ACTIVO sobre este documento",
+            "example": 2
+          },
+          "totalPrestamosHistoricos": {
+            "type": "number",
+            "description": "Cantidad total histórica de préstamos registrados sobre el documento",
+            "example": 5
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "autor",
+          "carrera",
+          "tipo",
+          "anio",
+          "resumen",
+          "palabrasClave",
+          "disponible",
+          "estaDisponible",
+          "prestamosActivosCount",
+          "totalPrestamosHistoricos",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DocumentMutationResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Documento académico catalogado y almacenado de forma privada."
+          },
+          "documento": {
+            "$ref": "#/components/schemas/DocumentItemDto"
+          }
+        },
+        "required": [
+          "message",
+          "documento"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de documentos que coinciden con los filtros aplicados",
+            "example": 4
+          },
+          "page": {
+            "type": "number",
+            "description": "Página actual consultada (base 1)",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "description": "Cantidad máxima de documentos por página",
+            "example": 12
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "Cantidad total de páginas disponibles",
+            "example": 1
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "DocumentsListResponseDto": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentItemDto"
+            }
+          }
+        },
+        "required": [
+          "meta",
+          "items"
+        ]
+      },
+      "UpdateDocumentDto": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "description": "Título completo de la obra académica",
+            "example": "Arquitectura sustentable en el Valle de Calingasta (Edición Revisada)"
+          },
+          "autor": {
+            "type": "string",
+            "description": "Autor o autores principales del documento",
+            "example": "Arq. Mariana Lucero"
+          },
+          "director": {
+            "type": "string",
+            "description": "Director o codirector de tesis/investigación",
+            "example": "Dr. Arq. Roberto Sánchez"
+          },
+          "carrera": {
+            "type": "string",
+            "description": "Carrera o área académica de la FAUD-UNSJ",
+            "example": "Arquitectura"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TESIS",
+              "MONOGRAFIA",
+              "INVESTIGACION",
+              "OTROS"
+            ],
+            "description": "Tipo de producción académica (TESIS, MONOGRAFIA, INVESTIGACION, OTROS)",
+            "example": "TESIS"
+          },
+          "anio": {
+            "type": "number",
+            "description": "Año de publicación o defensa del documento",
+            "example": 2024
+          },
+          "resumen": {
+            "type": "string",
+            "description": "Resumen académico (abstract) del documento"
+          },
+          "palabrasClave": {
+            "description": "Palabras clave normalizadas (arreglo de strings o lista separada por comas)",
+            "example": [
+              "sustentabilidad",
+              "Calingasta",
+              "bioclimática"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "departamentoOrigenId": {
+            "type": "string",
+            "description": "UUID del departamento de origen vinculado al documento",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "disponible": {
+            "type": "boolean",
+            "description": "Indica si el documento se encuentra habilitado por Biblioteca para préstamos digitales",
+            "example": true
+          }
+        }
+      },
+      "DeleteDocumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Documento eliminado del catálogo y archivo PDF removido del almacenamiento privado."
+          },
+          "id": {
+            "type": "string",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+          }
+        },
+        "required": [
+          "message",
+          "id"
+        ]
+      },
+      "CreateLoanDto": {
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "description": "UUID del documento académico del catálogo sobre el cual se solicita el préstamo digital de 7 días",
+            "example": "9a8b7c6d-1234-4a5b-8c9d-0e1f2a3b4c5d"
+          }
+        },
+        "required": [
+          "documentoId"
+        ]
+      },
+      "LoanDepartmentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Jáchal"
+          },
+          "esCapital": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "esCapital"
+        ]
+      },
+      "LoanUserSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Ana Pérez"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana.perez@jachal.gov.ar"
+          },
+          "departamento": {
+            "$ref": "#/components/schemas/LoanDepartmentSummaryDto"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "email",
+          "departamento"
+        ]
+      },
+      "LoanDocumentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "9a8b7c6d-1234-4a5b-8c9d-0e1f2a3b4c5d"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Vivienda social en Cuyo"
+          },
+          "autor": {
+            "type": "string",
+            "example": "L. Martínez"
+          },
+          "director": {
+            "type": "object",
+            "example": "Mg. Arq. Claudia Quiroga",
+            "nullable": true
+          },
+          "carrera": {
+            "type": "string",
+            "example": "Arquitectura"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "TESIS",
+              "MONOGRAFIA",
+              "INVESTIGACION",
+              "OTROS"
+            ],
+            "example": "INVESTIGACION"
+          },
+          "anio": {
+            "type": "number",
+            "example": 2021
+          },
+          "disponible": {
+            "type": "boolean",
+            "example": true
+          },
+          "departamentoOrigen": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LoanDepartmentSummaryDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "autor",
+          "carrera",
+          "tipo",
+          "anio",
+          "disponible"
+        ]
+      },
+      "LoanItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "d4e5f6a7-8901-4b2c-9d3e-4f5a6b7c8d9e"
+          },
+          "codigoReferencia": {
+            "type": "number",
+            "description": "Código numérico secuencial del préstamo",
+            "example": 1024
+          },
+          "codigoFormateado": {
+            "type": "string",
+            "description": "Código de préstamo formateado para visualización en interfaz y marca de agua",
+            "example": "#1024"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "SOLICITADO",
+              "ACTIVO",
+              "RECHAZADO",
+              "VENCIDO",
+              "REVOCADO",
+              "CERRADO"
+            ],
+            "example": "ACTIVO"
+          },
+          "fechaInicio": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z"
+          },
+          "fechaVencimiento": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-28T18:00:00.000Z"
+          },
+          "vigente": {
+            "type": "boolean",
+            "description": "Resultado de validarVigencia(): true solo si estado === ACTIVO y fechaVencimiento > now()",
+            "example": true
+          },
+          "diasRestantes": {
+            "type": "number",
+            "description": "Días restantes enteros o redondeados hacia arriba mientras el préstamo está vigente (0 si venció o fue revocado)",
+            "example": 7
+          },
+          "horasRestantes": {
+            "type": "number",
+            "description": "Horas restantes hasta el vencimiento del préstamo (0 si venció)",
+            "example": 168
+          },
+          "porVencer24h": {
+            "type": "boolean",
+            "description": "Indicador de alerta temprana si el préstamo sigue ACTIVO y vence en <= 24 horas (Figma pág. 9 y 13 / RF06)",
+            "example": false
+          },
+          "marcaAgua": {
+            "type": "string",
+            "description": "Marca de agua dinámica para el visor protegido (Figma pág. 14)",
+            "example": "Ana Pérez · Préstamo #1024"
+          },
+          "visorUrl": {
+            "type": "string",
+            "description": "Ruta del endpoint protegido de visualización según Diagrama de Secuencia (Figura 3)",
+            "example": "/api/v1/documentos/9a8b7c6d-1234-4a5b-8c9d-0e1f2a3b4c5d/ver"
+          },
+          "contenidoUrl": {
+            "type": "string",
+            "description": "Ruta alternativa del endpoint protegido de stream de contenido por préstamo",
+            "example": "/api/v1/prestamos/d4e5f6a7-8901-4b2c-9d3e-4f5a6b7c8d9e/contenido"
+          },
+          "tokenAcceso": {
+            "type": "object",
+            "description": "Token JWT DRM de 7 días (solo se expone al titular cuando el préstamo se encuentra ACTIVO y vigente)",
+            "nullable": true
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/LoanUserSummaryDto"
+          },
+          "documento": {
+            "$ref": "#/components/schemas/LoanDocumentSummaryDto"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "codigoReferencia",
+          "codigoFormateado",
+          "estado",
+          "fechaInicio",
+          "fechaVencimiento",
+          "vigente",
+          "diasRestantes",
+          "horasRestantes",
+          "porVencer24h",
+          "marcaAgua",
+          "visorUrl",
+          "contenidoUrl",
+          "usuario",
+          "documento",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LoanDrmRestrictionsDto": {
+        "type": "object",
+        "properties": {
+          "permitirDescarga": {
+            "type": "boolean",
+            "description": "El usuario nunca puede descargar el PDF local a su dispositivo (RNF02)",
+            "example": false
+          },
+          "permitirImpresion": {
+            "type": "boolean",
+            "description": "La impresión del documento se encuentra deshabilitada (RNF02)",
+            "example": false
+          },
+          "permitirCopia": {
+            "type": "boolean",
+            "description": "La copia de texto fuera del visor se encuentra bloqueada (RNF02)",
+            "example": false
+          },
+          "duracionMaximaDias": {
+            "type": "number",
+            "description": "Duración máxima reglamentaria del préstamo en días corridos",
+            "example": 7
+          },
+          "marcaAgua": {
+            "type": "string",
+            "description": "Texto de marca de agua dinámica superpuesto en el visor protegido (Figma pág. 14)",
+            "example": "Ana Pérez · Préstamo #1024"
+          }
+        },
+        "required": [
+          "permitirDescarga",
+          "permitirImpresion",
+          "permitirCopia",
+          "duracionMaximaDias",
+          "marcaAgua"
+        ]
+      },
+      "CreateLoanResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Préstamo digital #1024 otorgado exitosamente por 7 días corridos. Puede visualizar el documento en el visor protegido."
+          },
+          "prestamo": {
+            "$ref": "#/components/schemas/LoanItemDto"
+          },
+          "tokenAcceso": {
+            "type": "string",
+            "description": "Token JWT de acceso temporal DRM firmado con vigencia de 7 días (RF03 / RF04)"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresInDays": {
+            "type": "number",
+            "example": 7
+          },
+          "marcaAgua": {
+            "type": "string",
+            "example": "Ana Pérez · Préstamo #1024"
+          },
+          "drm": {
+            "$ref": "#/components/schemas/LoanDrmRestrictionsDto"
+          },
+          "visorUrl": {
+            "type": "string",
+            "example": "/api/v1/documentos/9a8b7c6d-1234-4a5b-8c9d-0e1f2a3b4c5d/ver"
+          },
+          "contenidoUrl": {
+            "type": "string",
+            "example": "/api/v1/prestamos/d4e5f6a7-8901-4b2c-9d3e-4f5a6b7c8d9e/contenido"
+          }
+        },
+        "required": [
+          "message",
+          "prestamo",
+          "tokenAcceso",
+          "tokenType",
+          "expiresInDays",
+          "marcaAgua",
+          "drm",
+          "visorUrl",
+          "contenidoUrl"
+        ]
+      },
+      "MyLoansCountersDto": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "number",
+            "example": 3
+          },
+          "activos": {
+            "type": "number",
+            "example": 2
+          },
+          "porVencer24h": {
+            "type": "number",
+            "example": 1
+          },
+          "vencidos": {
+            "type": "number",
+            "example": 1
+          },
+          "revocados": {
+            "type": "number",
+            "example": 0
+          },
+          "cerrados": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "todos",
+          "activos",
+          "porVencer24h",
+          "vencidos",
+          "revocados",
+          "cerrados"
+        ]
+      },
+      "MyLoansListResponseDto": {
+        "type": "object",
+        "properties": {
+          "contadores": {
+            "$ref": "#/components/schemas/MyLoansCountersDto"
+          },
+          "total": {
+            "type": "number",
+            "example": 3
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LoanItemDto"
+            }
+          }
+        },
+        "required": [
+          "contadores",
+          "total",
+          "items"
+        ]
+      },
+      "AdminLoansMetricsDto": {
+        "type": "object",
+        "properties": {
+          "activos": {
+            "type": "number",
+            "description": "Cantidad de préstamos actualmente en estado ACTIVO y vigentes",
+            "example": 18
+          },
+          "porVencer24h": {
+            "type": "number",
+            "description": "Cantidad de préstamos activos que vencen dentro de las próximas 24 horas (Figma pág. 9)",
+            "example": 4
+          },
+          "vencidosHoy": {
+            "type": "number",
+            "description": "Cantidad de préstamos cuyo vencimiento ocurrió en el día de hoy",
+            "example": 2
+          },
+          "vencidosTotal": {
+            "type": "number",
+            "description": "Total histórico de préstamos en estado VENCIDO",
+            "example": 12
+          },
+          "revocadosTotal": {
+            "type": "number",
+            "description": "Total de préstamos revocados manualmente por Biblioteca",
+            "example": 1
+          },
+          "rechazadosTotal": {
+            "type": "number",
+            "description": "Total de solicitudes rechazadas por no disponibilidad",
+            "example": 0
+          },
+          "cerradosTotal": {
+            "type": "number",
+            "description": "Total de préstamos cerrados/finalizados",
+            "example": 5
+          },
+          "totalHistorico": {
+            "type": "number",
+            "description": "Total general de registros de préstamos en el sistema",
+            "example": 36
+          }
+        },
+        "required": [
+          "activos",
+          "porVencer24h",
+          "vencidosHoy",
+          "vencidosTotal",
+          "revocadosTotal",
+          "rechazadosTotal",
+          "cerradosTotal",
+          "totalHistorico"
+        ]
+      },
+      "AdminLoansPaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 36
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 15
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "AdminLoansListResponseDto": {
+        "type": "object",
+        "properties": {
+          "metricas": {
+            "$ref": "#/components/schemas/AdminLoansMetricsDto"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/AdminLoansPaginationMetaDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LoanItemDto"
+            }
+          }
+        },
+        "required": [
+          "metricas",
+          "meta",
+          "items"
+        ]
+      },
+      "RevokeLoanDto": {
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string",
+            "description": "Motivo administrativo de la revocación anticipada del préstamo por parte de Biblioteca FAUD-UNSJ",
+            "example": "Revocación solicitada por actualización de versión del documento en archivo de Biblioteca."
+          }
+        }
+      },
+      "LoanStateTransitionResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "El préstamo #1024 fue revocado inmediatamente por Biblioteca FAUD-UNSJ. El acceso al visor PDF ha quedado bloqueado."
+          },
+          "estadoAnterior": {
+            "type": "string",
+            "enum": [
+              "SOLICITADO",
+              "ACTIVO",
+              "RECHAZADO",
+              "VENCIDO",
+              "REVOCADO",
+              "CERRADO"
+            ],
+            "example": "ACTIVO"
+          },
+          "estadoActual": {
+            "type": "string",
+            "enum": [
+              "SOLICITADO",
+              "ACTIVO",
+              "RECHAZADO",
+              "VENCIDO",
+              "REVOCADO",
+              "CERRADO"
+            ],
+            "example": "REVOCADO"
+          },
+          "motivo": {
+            "type": "string",
+            "example": "Revocación administrativa por auditoría de Biblioteca."
+          },
+          "prestamo": {
+            "$ref": "#/components/schemas/LoanItemDto"
+          }
+        },
+        "required": [
+          "message",
+          "estadoAnterior",
+          "estadoActual",
+          "prestamo"
+        ]
+      },
+      "LoanViewerMetadataResponseDto": {
+        "type": "object",
+        "properties": {
+          "prestamoId": {
+            "type": "string",
+            "example": "d4e5f6a7-8901-4b2c-9d3e-4f5a6b7c8d9e"
+          },
+          "codigoReferencia": {
+            "type": "number",
+            "example": 1024
+          },
+          "codigoFormateado": {
+            "type": "string",
+            "example": "#1024"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "SOLICITADO",
+              "ACTIVO",
+              "RECHAZADO",
+              "VENCIDO",
+              "REVOCADO",
+              "CERRADO"
+            ],
+            "example": "ACTIVO"
+          },
+          "fechaInicio": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-21T18:00:00.000Z"
+          },
+          "fechaVencimiento": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-10-28T18:00:00.000Z"
+          },
+          "diasRestantes": {
+            "type": "number",
+            "example": 7
+          },
+          "horasRestantes": {
+            "type": "number",
+            "example": 168
+          },
+          "segundosRestantes": {
+            "type": "number",
+            "example": 604800
+          },
+          "porVencer24h": {
+            "type": "boolean",
+            "example": false
+          },
+          "marcaAgua": {
+            "type": "string",
+            "example": "Ana Pérez · Préstamo #1024"
+          },
+          "drm": {
+            "$ref": "#/components/schemas/LoanDrmRestrictionsDto"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/LoanUserSummaryDto"
+          },
+          "documento": {
+            "$ref": "#/components/schemas/LoanDocumentSummaryDto"
+          },
+          "streamDocumentoUrl": {
+            "type": "string",
+            "example": "/api/v1/documentos/9a8b7c6d-1234-4a5b-8c9d-0e1f2a3b4c5d/ver"
+          },
+          "streamPrestamoUrl": {
+            "type": "string",
+            "example": "/api/v1/prestamos/d4e5f6a7-8901-4b2c-9d3e-4f5a6b7c8d9e/contenido"
+          }
+        },
+        "required": [
+          "prestamoId",
+          "codigoReferencia",
+          "codigoFormateado",
+          "estado",
+          "fechaInicio",
+          "fechaVencimiento",
+          "diasRestantes",
+          "horasRestantes",
+          "segundosRestantes",
+          "porVencer24h",
+          "marcaAgua",
+          "drm",
+          "usuario",
+          "documento",
+          "streamDocumentoUrl",
+          "streamPrestamoUrl"
+        ]
+      }
+    }
+  }
+}

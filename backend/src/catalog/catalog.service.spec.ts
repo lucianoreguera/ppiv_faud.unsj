@@ -233,6 +233,30 @@ describe('CatalogService & PdfStorageService (Fase 3 - RF01, RF02)', () => {
       await expect(
         catalogService.estaDisponible('doc-uuid-1', 'user-uuid-repetido'),
       ).resolves.toBe(false);
+
+      // Caso 3: Documento suspendido administrativamente por Biblioteca (disponible = false) -> disponible = false
+      mockPrismaService.documento.findUnique.mockResolvedValueOnce({
+        id: 'doc-uuid-1',
+        disponible: false,
+      });
+      await expect(
+        catalogService.estaDisponible('doc-uuid-1', 'user-uuid-nuevo'),
+      ).resolves.toBe(false);
+
+      // Caso 4: Consulta pública sin usuarioId sobre documento habilitado -> disponible = true
+      mockPrismaService.documento.findUnique.mockResolvedValueOnce({
+        id: 'doc-uuid-1',
+        disponible: true,
+      });
+      await expect(catalogService.estaDisponible('doc-uuid-1')).resolves.toBe(
+        true,
+      );
+
+      // Caso 5: Documento inexistente -> disponible = false
+      mockPrismaService.documento.findUnique.mockResolvedValueOnce(null);
+      await expect(
+        catalogService.estaDisponible('doc-uuid-inexistente'),
+      ).resolves.toBe(false);
     });
 
     it('remove() debe bloquear con ConflictException la eliminación de un documento con préstamos activos', async () => {

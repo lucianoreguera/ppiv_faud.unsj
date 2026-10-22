@@ -126,3 +126,15 @@ export enum TipoNotificacion {
   - **Given** un usuario autenticado con notificaciones pendientes (`leida = false`)
   - **When** consulta `GET /api/v1/notificaciones` y luego ejecuta `PATCH /api/v1/notificaciones/:id/leida`
   - **Then** el sistema actualiza `leida = true` y decrementa el contador `noLeidas` del usuario.
+
+---
+
+### Spec 05 — Seguridad (Hardening HTTP + Rate Limiting) y Contrato OpenAPI 3.0 (`RNF01`, `RNF02`)
+- **Regla de negocio:**
+  1. **Cabeceras de Seguridad HTTP (`helmet`):** Toda respuesta de la API incluye cabeceras de endurecimiento (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: no-referrer`, `Content-Security-Policy`) y oculta `X-Powered-By`.
+  2. **Protección contra Fuerza Bruta (`@nestjs/throttler`):** Se aplica un límite global de `100 req/min` por IP y un límite estricto de `15 req/min` en los endpoints públicos de autenticación (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`). Superar el umbral responde `429 Too Many Requests` con encabezado `Retry-After`.
+  3. **Contrato OpenAPI Congelado (`v1.0.0`):** El contrato completo (26 rutas y 50 esquemas DTO) se exporta en `docs/specs/openapi.json` y `backend/openapi.json` mediante `pnpm run openapi:export`.
+- **Escenario 1: Bloqueo de ataque de fuerza bruta en Login (`429 Too Many Requests`)**
+  - **Given** una dirección IP que realiza más de 15 intentos de inicio de sesión en menos de 60 segundos
+  - **When** envía el intento N° 16 a `POST /api/v1/auth/login`
+  - **Then** el sistema rechaza la petición con `429 Too Many Requests` e incluye la cabecera `Retry-After`.

@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   EstadoPrestamo,
@@ -7,16 +7,21 @@ import {
   TipoDocumento,
   TipoNotificacion,
 } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { PdfStorageService } from './../src/catalog/pdf-storage.service';
+import { configureAppSecurityAndPipes } from './../src/common/bootstrap/security-and-pipes.config';
+import { setupSwaggerModule } from './../src/common/swagger/swagger.config';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
+describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4, 5 y 6 (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
   const testUserEmail = 'alumno.prueba.fase2@jachal.gov.ar';
+  const e2eFullCycleEmail = 'alumno.cierre.fase6@calingasta.gob.ar';
   let jachalDepartamentoId: string;
   let registeredUserId: string;
   let adminAccessToken: string;
@@ -40,17 +45,8 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        transformOptions: {
-          enableImplicitConversion: true,
-        },
-      }),
-    );
+    configureAppSecurityAndPipes(app);
+    setupSwaggerModule(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -62,6 +58,7 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
           email: {
             in: [
               testUserEmail,
+              e2eFullCycleEmail,
               'ana.perez@jachal.gov.ar',
               'sofia.navarro@caucete.gob.ar',
             ],
@@ -70,7 +67,7 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
       },
     });
     await prisma.usuario.deleteMany({
-      where: { email: testUserEmail },
+      where: { email: { in: [testUserEmail, e2eFullCycleEmail] } },
     });
   });
 
@@ -82,6 +79,7 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
             email: {
               in: [
                 testUserEmail,
+                e2eFullCycleEmail,
                 'ana.perez@jachal.gov.ar',
                 'sofia.navarro@caucete.gob.ar',
               ],
@@ -90,7 +88,7 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
         },
       });
       await prisma.usuario.deleteMany({
-        where: { email: testUserEmail },
+        where: { email: { in: [testUserEmail, e2eFullCycleEmail] } },
       });
     }
     await app.close();
@@ -928,6 +926,258 @@ describe('Repositorio FAUD-UNSJ — Fases 0, 1, 2, 3, 4 y 5 (e2e)', () => {
         adminNotifRes.body.contadores.porTipo.PROXIMO_VENCIMIENTO_24H,
       ).toBeGreaterThanOrEqual(1);
       expect(adminNotifRes.body.items.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('Fase 6 — Pruebas Integrales (E2E), Hardening (Helmet + Rate Limiting) y Contrato OpenAPI Final', () => {
+    it('Hardening HTTP (Helmet): debe inyectar cabeceras de seguridad y ocultar X-Powered-By en la API', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/health')
+        .expect(200);
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+      expect(response.headers['x-dns-prefetch-control']).toBe('off');
+      expect(response.headers['x-download-options']).toBe('noopen');
+      expect(response.headers['referrer-policy']).toBe('no-referrer');
+      expect(response.headers['content-security-policy']).toContain(
+        "default-src 'self'",
+      );
+      expect(response.headers['x-powered-by']).toBeUndefined();
+    });
+
+    it('Rate Limiting (@nestjs/throttler): debe incluir encabezados X-RateLimit-* y bloquear ataques de fuerza bruta con 429 Too Many Requests', async () => {
+      const attackerIp = '198.51.100.77';
+
+      // Primer intento desde la IP simulada: verifica encabezados X-RateLimit-*
+      const firstAttempt = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .set('X-Forwarded-For', attackerIp)
+        .send({
+          email: 'admin@faud.unsj.edu.ar',
+          password: 'WrongPassword123!',
+        })
+        .expect(401);
+
+      expect(firstAttempt.headers['x-ratelimit-limit']).toBe('15');
+      expect(firstAttempt.headers['x-ratelimit-remaining']).toBe('14');
+      expect(firstAttempt.headers['x-ratelimit-reset']).toBeDefined();
+
+      // Consumimos los 14 intentos restantes permitidos en la ventana de 60s
+      for (let i = 0; i < 14; i++) {
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .set('X-Forwarded-For', attackerIp)
+          .send({
+            email: 'admin@faud.unsj.edu.ar',
+            password: 'WrongPassword123!',
+          })
+          .expect(401);
+      }
+
+      // El intento N° 16 debe ser rechazado con 429 Too Many Requests
+      const blockedAttempt = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .set('X-Forwarded-For', attackerIp)
+        .send({
+          email: 'admin@faud.unsj.edu.ar',
+          password: 'WrongPassword123!',
+        })
+        .expect(429);
+
+      expect(blockedAttempt.headers['retry-after']).toBeDefined();
+      expect(blockedAttempt.body.message).toContain(
+        'Demasiadas solicitudes desde esta dirección IP',
+      );
+    });
+
+    it('Circuito Integral End-to-End (Pasos 1 a 5): Registro departamental -> Aprobación -> Carga de PDF -> Búsqueda y Préstamo -> Lectura 200 OK -> Bloqueo 403 Forbidden', async () => {
+      const calingasta = await prisma.departamento.findFirst({
+        where: { nombre: 'Calingasta' },
+      });
+      expect(calingasta).toBeDefined();
+
+      // Paso 1: Registro y aprobación de usuario departamental (Calingasta)
+      const regRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/register')
+        .send({
+          nombre: 'Lucas Echegaray',
+          email: e2eFullCycleEmail,
+          password: 'Calingasta2026!',
+          departamentoId: calingasta!.id,
+        })
+        .expect(201);
+
+      const lucasId = regRes.body.usuario.id as string;
+      expect(regRes.body.usuario.estadoValidacion).toBe(
+        EstadoValidacionUsuario.PENDIENTE,
+      );
+
+      // Intento de login bloqueado mientras está PENDIENTE
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: e2eFullCycleEmail,
+          password: 'Calingasta2026!',
+        })
+        .expect(403);
+
+      // Aprobación por el Administrador de Biblioteca
+      await request(app.getHttpServer())
+        .patch(`/api/v1/usuarios/${lucasId}/estado`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .send({
+          estado: EstadoValidacionUsuario.APROBADO,
+          motivo: 'Certificación E2E Fase 6 — Estudiante de Calingasta.',
+        })
+        .expect(200);
+
+      // Login exitoso del estudiante aprobado
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: e2eFullCycleEmail,
+          password: 'Calingasta2026!',
+        })
+        .expect(200);
+
+      const lucasToken = loginRes.body.accessToken as string;
+
+      // Paso 2: Carga de documento académico en PDF por el Administrador
+      const pdfBuffer = PdfStorageService.buildSamplePdfBuffer(
+        'Observatorio astronómico y paisaje en Calingasta',
+        'Arq. Lucas Echegaray',
+        2026,
+      );
+
+      const uploadRes = await request(app.getHttpServer())
+        .post('/api/v1/documentos')
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .field('titulo', 'Observatorio astronómico y paisaje en Calingasta')
+        .field('autor', 'Arq. Lucas Echegaray')
+        .field('director', 'Dr. Arq. Roberto Sánchez')
+        .field('carrera', 'Arquitectura')
+        .field('tipo', TipoDocumento.TESIS)
+        .field('anio', '2026')
+        .field(
+          'resumen',
+          'Proyecto arquitectónico de integración paisajística en Barreal, departamento de Calingasta.',
+        )
+        .field('palabrasClave', 'Calingasta, astronomía, paisaje, arquitectura')
+        .field('departamentoOrigenId', calingasta!.id)
+        .attach('archivo', pdfBuffer, {
+          filename: 'observatorio-calingasta-2026.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+
+      const docId = uploadRes.body.documento.id as string;
+
+      // Paso 3: Búsqueda pública y solicitud de préstamo temporal a 7 días
+      const searchRes = await request(app.getHttpServer())
+        .get('/api/v1/documentos')
+        .query({
+          q: 'Observatorio astronómico',
+          departamentoId: calingasta!.id,
+          disponible: true,
+        })
+        .expect(200);
+
+      expect(searchRes.body.items).toHaveLength(1);
+      expect(searchRes.body.items[0].id).toBe(docId);
+      expect(searchRes.body.items[0].estaDisponible).toBe(true);
+
+      const loanRes = await request(app.getHttpServer())
+        .post('/api/v1/prestamos')
+        .set('Authorization', `Bearer ${lucasToken}`)
+        .send({ documentoId: docId })
+        .expect(201);
+
+      const loanId = loanRes.body.prestamo.id as string;
+      const drmToken = loanRes.body.tokenAcceso as string;
+      expect(loanRes.body.prestamo.estado).toBe(EstadoPrestamo.ACTIVO);
+      expect(loanRes.body.marcaAgua).toContain('Lucas Echegaray · Préstamo #');
+
+      // Paso 4: Acceso al documento con token válido (200 OK)
+      const viewOkRes = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${docId}/ver`)
+        .set('Authorization', `Bearer ${drmToken}`)
+        .buffer(true)
+        .parse((res, callback) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () => callback(null, Buffer.concat(chunks)));
+        })
+        .expect(200);
+
+      expect(viewOkRes.headers['content-type']).toContain('application/pdf');
+      expect(viewOkRes.headers['x-drm-watermark']).toContain('Lucas Echegaray');
+      expect((viewOkRes.body as Buffer).subarray(0, 5).toString('ascii')).toBe(
+        '%PDF-',
+      );
+
+      // Paso 5: Bloqueo de acceso con préstamo revocado/vencido (403 Forbidden)
+      await request(app.getHttpServer())
+        .patch(`/api/v1/prestamos/${loanId}/revocar`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .send({
+          motivo: 'Prueba integral Fase 6: bloqueo inmediato de DRM.',
+        })
+        .expect(200);
+
+      const viewBlockedRes = await request(app.getHttpServer())
+        .get(`/api/v1/documentos/${docId}/ver`)
+        .set('Authorization', `Bearer ${drmToken}`)
+        .expect(403);
+
+      expect(viewBlockedRes.body.message).toContain(
+        'El préstamo ha vencido o fue revocado',
+      );
+
+      // Limpieza del préstamo y documento creado en este circuito integral
+      await prisma.prestamo.deleteMany({ where: { id: loanId } });
+      await request(app.getHttpServer())
+        .delete(`/api/v1/documentos/${docId}`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
+        .expect(200);
+    });
+
+    it('Contrato OpenAPI 3.0 Congelado: GET /api/docs-json y docs/specs/openapi.json deben exponer todos los endpoints y esquemas para Frontend', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/docs-json')
+        .expect(200);
+
+      expect(response.body.openapi).toBe('3.0.0');
+      expect(response.body.info.version).toBe('1.0.0');
+      expect(response.body.components.securitySchemes).toHaveProperty(
+        'jwt-auth',
+      );
+      expect(response.body.components.securitySchemes).toHaveProperty(
+        'loan-drm-token',
+      );
+      expect(Object.keys(response.body.paths).length).toBeGreaterThanOrEqual(
+        26,
+      );
+
+      // Verificamos que el archivo exportado docs/specs/openapi.json exista y esté sincronizado
+      const exportedSpecPath = path.resolve(
+        __dirname,
+        '..',
+        '..',
+        'docs',
+        'specs',
+        'openapi.json',
+      );
+      expect(fs.existsSync(exportedSpecPath)).toBe(true);
+
+      const exportedSpec = JSON.parse(
+        fs.readFileSync(exportedSpecPath, 'utf-8'),
+      );
+      expect(exportedSpec.openapi).toBe('3.0.0');
+      expect(exportedSpec.info.version).toBe('1.0.0');
+      expect(Object.keys(exportedSpec.paths)).toEqual(
+        Object.keys(response.body.paths),
+      );
     });
   });
 });

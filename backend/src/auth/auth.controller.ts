@@ -16,8 +16,10 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../common/interfaces/authenticated-user.interface';
@@ -36,6 +38,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({
     summary:
       'Registrar un nuevo usuario departamental (estado inicial PENDIENTE)',
@@ -52,12 +55,17 @@ export class AuthController {
   @ApiBadRequestResponse({
     description: 'Datos de entrada inválidos o departamento inexistente.',
   })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Demasiados intentos de registro desde esta dirección IP (Rate Limit excedido).',
+  })
   async register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
     return this.authService.register(dto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @ApiOperation({
     summary: 'Iniciar sesión y obtener token JWT de sesión',
     description:
@@ -73,6 +81,10 @@ export class AuthController {
   @ApiForbiddenResponse({
     description:
       'Cuenta en estado PENDIENTE o RECHAZADO por la Biblioteca FAUD-UNSJ.',
+  })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Demasiados intentos de inicio de sesión desde esta dirección IP (Rate Limit excedido).',
   })
   async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
