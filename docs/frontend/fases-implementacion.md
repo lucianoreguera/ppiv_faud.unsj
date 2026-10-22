@@ -150,7 +150,7 @@ flowchart LR
 
 ---
 
-## Fase 6: Pruebas Automatizadas (Vitest + Testing Library), Pulido UI/UX, Docker y Cierre
+## Fase 6: Pruebas Automatizadas (Vitest + Testing Library), Pulido UI/UX, Docker y Cierre (Completada ✅)
 **Objetivo:** Certificar la calidad técnica y funcional del Frontend antes de la entrega final de la Práctica Profesionalizante IV.
 
 - **Entregables técnicos:**
@@ -163,4 +163,4 @@ flowchart LR
   - Verificación de compilación limpia de TypeScript y bundle de producción (`pnpm run build` y `pnpm run preview`).
   - Configuración opcional de `Dockerfile` / servicio en `docker-compose.yml` y guía de ejecución integral del monorepo (`Backend + Frontend + PostgreSQL + Mailpit`).
 - **Criterio de validación:** Todas las suites de pruebas de `backend/` y `frontend/` en verde, build de producción sin advertencias de tipos y trazabilidad 100% completa contra `RF01`–`RF06` y `RNF01`–`RNF02`.
-- **Documento de seguimiento:** `docs/frontend/fase-06-pruebas-integrales-y-cierre.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-06-pruebas-integrales-y-cierre.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-06-pruebas-integrales-y-cierre.md).

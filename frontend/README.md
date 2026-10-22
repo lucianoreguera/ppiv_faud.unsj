@@ -18,7 +18,26 @@ pnpm run build
 
 # Ejecutar suite de pruebas automatizadas (Vitest + React Testing Library)
 pnpm run test
+
+# Servir la build de producción en http://localhost:4173
+pnpm run preview
 ```
+
+---
+
+## Imagen Docker (build de producción con nginx)
+
+Desde la raíz del monorepo, con el Backend corriendo en el host (`http://localhost:3000`):
+
+```bash
+# SPA en http://localhost:8080 (reenvía /api al Backend)
+docker compose --profile frontend up -d --build
+
+# Con los accesos de demostración en /login
+VITE_SHOW_DEMO_ACCOUNTS=true docker compose --profile frontend up -d --build
+```
+
+La imagen compila con `VITE_API_BASE_URL=/api/v1` y nginx reenvía `/api` a `API_UPSTREAM` (por defecto `http://host.docker.internal:3000`). Configuración en [`nginx/`](nginx/). Guía completa del monorepo: [`README.md`](../README.md).
 
 ---
 
@@ -32,4 +51,5 @@ pnpm run test
 - **Seguimiento Fase 3:** [`docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md`](../docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md)
 - **Seguimiento Fase 4:** [`docs/frontend/fase-04-visor-pdf-protegido-drm.md`](../docs/frontend/fase-04-visor-pdf-protegido-drm.md)
 - **Seguimiento Fase 5:** [`docs/frontend/fase-05-panel-admin-biblioteca.md`](../docs/frontend/fase-05-panel-admin-biblioteca.md)
+- **Seguimiento Fase 6:** [`docs/frontend/fase-06-pruebas-integrales-y-cierre.md`](../docs/frontend/fase-06-pruebas-integrales-y-cierre.md)
 - **Contrato API Congelado (OpenAPI 3.0):** [`docs/specs/openapi.json`](../docs/specs/openapi.json)

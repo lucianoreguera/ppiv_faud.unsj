@@ -1,0 +1,48 @@
+# SPA FAUD-UNSJ servida por nginx. La imagen oficial reemplaza API_UPSTREAM al arrancar el contenedor.
+
+# El worker de pdf.js se publica como .mjs, que mime.types no conoce; un module worker exige MIME de JavaScript.
+# Este archivo se incluye dentro de http {}, donde el bloque se suma a mime.types.
+types {
+    text/javascript mjs;
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    gzip on;
+    gzip_types text/css application/javascript text/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # API REST y streams DRM del Backend NestJS en el mismo origen de la SPA
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # nginx es el borde: se descarta el X-Forwarded-For del cliente, porque el Rate Limiting del Backend
+        # toma la primera IP de esa cabecera y una IP inventada en cada intento esquivaría el límite de login
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Alta de PDFs de hasta 50 MB (RF01) más los campos del multipart
+        client_max_body_size 55m;
+        proxy_request_buffering off;
+        proxy_read_timeout 120s;
+    }
+
+    # Recursos con hash en el nombre: caché de larga duración
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Rutas del cliente (/catalogo, /visor/:id, /admin/...): siempre index.html, revalidado en cada visita
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+}
