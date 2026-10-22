@@ -36,56 +36,6 @@ export const TIPOS_DOCUMENTO_FORM = [
   'Otros',
 ] as const;
 
-export type MyLoanTab = 'activos' | 'vencidos' | 'solicitados';
-
-export interface MyLoanFixture {
-  id: string;
-  codigo: string;
-  documentoId: string;
-  titulo: string;
-  autor: string;
-  inicio: string;
-  vence: string;
-  estado: 'ACTIVO' | 'POR_VENCER' | 'VENCIDO' | 'SOLICITADO';
-  diasRestantes?: number;
-}
-
-/** Figma pág. 13 */
-export const MY_LOANS: MyLoanFixture[] = [
-  {
-    id: '1024',
-    codigo: '#1024',
-    documentoId: 'accesibilidad-urbana-san-juan',
-    titulo: 'Accesibilidad urbana en San Juan',
-    autor: 'Morales M.D.',
-    inicio: '18/09/2026',
-    vence: '25/09/2026',
-    estado: 'ACTIVO',
-    diasRestantes: 5,
-  },
-  {
-    id: '1019',
-    codigo: '#1019',
-    documentoId: 'vivienda-social-cuyo',
-    titulo: 'Vivienda social en Cuyo',
-    autor: 'Pérez L.',
-    inicio: '14/09/2026',
-    vence: '21/09/2026',
-    estado: 'POR_VENCER',
-    diasRestantes: 1,
-  },
-  {
-    id: '1003',
-    codigo: '#1003',
-    documentoId: 'patrimonio-arquitectonico-sanjuanino',
-    titulo: 'Patrimonio arquitectónico sanjuanino',
-    autor: 'Gómez R.',
-    inicio: '01/09/2026',
-    vence: '08/09/2026',
-    estado: 'VENCIDO',
-  },
-];
-
 export type AdminUserTab = 'pendientes' | 'aprobados' | 'rechazados';
 
 export interface AdminUserFixture {

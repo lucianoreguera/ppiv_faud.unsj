@@ -372,7 +372,8 @@ describe('Fase 2 — Catálogo Público, Buscador Combinado y Ficha Bibliográfi
       const buttons = await screen.findAllByRole('button', { name: 'Solicitar Préstamo Digital (7 días)' });
       buttons.forEach((button) => expect(button).toBeEnabled());
       await user.click(buttons[0]!);
-      expect(await screen.findByText('Solicitud de préstamo disponible en la Fase 3')).toBeInTheDocument();
+      // Fase 3: el botón abre la confirmación de RequestLoanModal (cubierta en fase-03.spec.tsx)
+      expect(await screen.findByRole('dialog', { name: 'Confirmar préstamo digital' })).toBeInTheDocument();
     });
 
     it('deshabilita la solicitud si Biblioteca suspendió el material (disponible = false)', async () => {

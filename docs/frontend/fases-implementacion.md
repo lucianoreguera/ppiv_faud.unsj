@@ -78,7 +78,7 @@ flowchart LR
 
 ---
 
-## Fase 3: Solicitud de Préstamo, Panel `"Mis Préstamos"` y Bandeja de Notificaciones (`RF03`, `RF06`)
+## Fase 3: Solicitud de Préstamo, Panel `"Mis Préstamos"` y Bandeja de Notificaciones (`RF03`, `RF06`) (Completada ✅)
 **Objetivo:** Implementar la experiencia completa del estudiante/docente autenticado (**Figma página 13**): solicitud de préstamo concurrente por 7 días, seguimiento de vigencia con alerta temprana de 24h y centro de notificaciones.
 
 - **Entregables técnicos:**
@@ -99,7 +99,7 @@ flowchart LR
     - Listado filtrable por estado (`Todas`, `No leídas`, `Leídas`) y por tipo (`PRESTAMO_OTORGADO`, `PROXIMO_VENCIMIENTO_24H`, `PRESTAMO_VENCIDO`, `PRESTAMO_REVOCADO`, `CUENTA_APROBADA`).
     - Acciones para marcar una notificación como leída (`PATCH /api/v1/notificaciones/:id/leida`) o todas a la vez (`PATCH /api/v1/notificaciones/marcar-todas-leidas`).
 - **Criterio de validación:** Solicitud de préstamo desde la ficha del documento, visualización inmediata en `/mis-prestamos` con cuenta regresiva de 7 días, recepción de la notificación `PRESTAMO_OTORGADO` y devolución anticipada funcional.
-- **Documento de seguimiento:** `docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-03-prestamos-usuario-y-notificaciones.md).
 
 ---
 

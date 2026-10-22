@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { loansApi } from '../api/loans.api';
 import { useAuth } from '../context/AuthContext';
 import { buildLoginPath } from '../routes/auth-redirect';
@@ -11,6 +11,8 @@ import type { DocumentItemDto, LoanItemDto } from '../types/openapi.types';
  * - open-viewer: el usuario ya tiene un préstamo ACTIVO vigente sobre la obra → /visor/:prestamoId
  * - request:     documento habilitado → "Solicitar Préstamo Digital (7 días)"
  * - unavailable: documento suspendido por Biblioteca (disponible = false)
+ *
+ * `refresh()` vuelve a consultar los préstamos tras una solicitud otorgada o rechazada (Fase 3).
  */
 export type LoanAction =
   | { kind: 'checking' }
@@ -24,9 +26,11 @@ interface ActiveLoanLookup {
   loan: LoanItemDto | null;
 }
 
-export function useDocumentLoanAction(doc: DocumentItemDto | null): LoanAction {
+export function useDocumentLoanAction(doc: DocumentItemDto | null): { action: LoanAction; refresh: () => void } {
   const { status } = useAuth();
   const [lookup, setLookup] = useState<ActiveLoanLookup | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refresh = useCallback(() => setRefreshToken((t) => t + 1), []);
   const documentId = doc?.id;
 
   useEffect(() => {
@@ -44,8 +48,16 @@ export function useDocumentLoanAction(doc: DocumentItemDto | null): LoanAction {
         if (!controller.signal.aborted) setLookup({ documentId, loan: null });
       });
     return () => controller.abort();
-  }, [documentId, status]);
+  }, [documentId, status, refreshToken]);
 
+  return { action: resolveAction(doc, status, lookup), refresh };
+}
+
+function resolveAction(
+  doc: DocumentItemDto | null,
+  status: ReturnType<typeof useAuth>['status'],
+  lookup: ActiveLoanLookup | null,
+): LoanAction {
   if (!doc || status === 'loading') return { kind: 'checking' };
   if (status === 'anonymous') return { kind: 'login', to: buildLoginPath(`/documentos/${doc.id}`) };
   if (lookup?.documentId !== doc.id) return { kind: 'checking' };

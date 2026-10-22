@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogIn, LogOut, Menu, X } from 'lucide-react';
+import { ArrowLeft, Bell, LogIn, LogOut, Menu, X } from 'lucide-react';
 import { BrandMark, BrandWordmark } from './Brand';
+import { NotificationBell, unreadBadgeLabel } from '../notifications/NotificationBell';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationsContext';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { buildLoginPath } from '../../routes/auth-redirect';
 
 /**
  * Layout del alumno / usuario departamental (Catálogo, Ficha y Mis préstamos).
  * Barra superior única oscura #2D2D2D (Figma págs. 13 y 19) a ancho completo: la navegación no cambia
  * de color ni de tamaño al pasar del catálogo a "Mis préstamos", y armoniza con la portada y el panel admin.
+ * Con sesión iniciada muestra la campana de notificaciones (RF06), montada una sola vez según el breakpoint.
  */
 const NAV_ITEMS = [
   { to: '/catalogo', label: 'Catálogo' },
@@ -34,8 +38,11 @@ export const UserLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { counters } = useNotifications();
+  const isMobile = useMediaQuery('(max-width: 1023px)');
   const [menuOpen, setMenuOpen] = useState(false);
   const isDocumentDetail = location.pathname.startsWith('/documentos/');
+  const unread = counters?.noLeidas ?? 0;
 
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
@@ -82,6 +89,7 @@ export const UserLayout: React.FC = () => {
           <div className="ml-auto flex items-center gap-6">
             {user ? (
               <>
+                {!isMobile && <NotificationBell placement="desktop" />}
                 <span className="inline-flex items-center gap-3" title={sessionLabel}>
                   <span
                     aria-hidden="true"
@@ -130,15 +138,18 @@ export const UserLayout: React.FC = () => {
           <Link to="/catalogo" className={`text-faud-amber text-[15px] font-bold ${FOCUS_RING}`}>
             Repositorio FAUD
           </Link>
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className={`ml-auto p-1 -mr-1 text-faud-text-cream ${FOCUS_RING}`}
-            aria-label="Abrir menú"
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {user && isMobile && <NotificationBell placement="mobile" />}
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className={`p-1 -mr-1 text-faud-text-cream ${FOCUS_RING}`}
+              aria-label="Abrir menú"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -166,6 +177,22 @@ export const UserLayout: React.FC = () => {
                 {item.label}
               </NavLink>
             ))}
+            {user && (
+              <NavLink
+                to="/notificaciones"
+                className={`flex items-center gap-2 py-2.5 text-body ${
+                  isActive('/notificaciones') ? 'text-faud-amber font-bold' : 'text-faud-text-cream'
+                }`}
+              >
+                <Bell className="w-4 h-4 text-faud-amber" />
+                Notificaciones
+                {unread > 0 && (
+                  <span className="ml-1 min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-faud-amber text-faud-ink text-[11px] font-bold">
+                    {unreadBadgeLabel(unread)}
+                  </span>
+                )}
+              </NavLink>
+            )}
             {user ? (
               <button
                 type="button"

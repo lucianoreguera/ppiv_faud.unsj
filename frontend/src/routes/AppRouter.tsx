@@ -10,6 +10,7 @@ import { PhasePlaceholderPage } from '../pages/public/PhasePlaceholderPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
 import { MyLoansPage } from '../pages/user/MyLoansPage';
+import { NotificationsPage } from '../pages/user/NotificationsPage';
 import { ViewerPage } from '../pages/user/ViewerPage';
 import { AdminDocumentUploadPage } from '../pages/admin/AdminDocumentUploadPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
@@ -27,28 +28,13 @@ export const AppRouter: React.FC = () => (
       <Route path="/registro" element={<RegisterPage />} />
     </Route>
 
-    {/* Experiencia del alumno (Figma págs. 11, 12 y 13) — Catálogo y Ficha son públicos */}
+    {/* Experiencia del alumno (Figma págs. 11, 12 y 13) — Catálogo y Ficha son públicos; préstamos y avisos requieren sesión */}
     <Route element={<UserLayout />}>
       <Route path="/catalogo" element={<CatalogPage />} />
       <Route path="/documentos/:id" element={<DocumentDetailPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/mis-prestamos" element={<MyLoansPage />} />
-        <Route
-          path="/notificaciones"
-          element={
-            <PhasePlaceholderPage
-              padded
-              title="Notificaciones"
-              phaseLabel="Fase 3 · RF06"
-              description="Bandeja de avisos: cuenta aprobada, préstamo otorgado, recordatorio 24 horas antes del vencimiento y préstamo vencido o revocado. No forma parte de los prototipos Figma."
-              endpoints={[
-                'GET /api/v1/notificaciones',
-                'PATCH /api/v1/notificaciones/:id/leida',
-                'PATCH /api/v1/notificaciones/marcar-todas-leidas',
-              ]}
-            />
-          }
-        />
+        <Route path="/notificaciones" element={<NotificationsPage />} />
       </Route>
     </Route>
 

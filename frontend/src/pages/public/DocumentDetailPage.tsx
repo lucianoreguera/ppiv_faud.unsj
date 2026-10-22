@@ -1,19 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { CalendarClock, FileSearch, Lock, Scale, ShieldCheck, Stamp, TimerOff } from 'lucide-react';
 import { catalogApi } from '../../api/catalog.api';
 import { ApiHttpError } from '../../api/http-client';
 import { departmentLabel, type DocumentDetailLocationState } from '../../components/catalog/DocumentCard';
 import { LoanActionButton } from '../../components/catalog/LoanActionButton';
+import { RequestLoanModal } from '../../components/loans/RequestLoanModal';
 import { Alert } from '../../components/ui/Alert';
 import { AvailabilityBadge, KeywordTag, TIPO_DOCUMENTO_LABEL_LARGO } from '../../components/ui/Badge';
 import { buttonClasses } from '../../components/ui/Button';
 import { CornerAccents } from '../../components/ui/Decorations';
-import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { useDocumentLoanAction } from '../../hooks/useDocumentLoanAction';
 import type { DocumentItemDto } from '../../types/openapi.types';
 
-/** Ficha bibliográfica (Figma págs. 12 y 19 · Spec FE-02) — GET /api/v1/documentos/:id */
+/**
+ * Ficha bibliográfica (Figma págs. 12 y 19 · Spec FE-02) — GET /api/v1/documentos/:id
+ * "Solicitar Préstamo Digital (7 días)" abre RequestLoanModal → POST /api/v1/prestamos (Spec FE-03).
+ */
 const HOW_IT_WORKS = [
   'Solicita el préstamo digital',
   'Lee online desde cualquier dispositivo',
@@ -83,9 +88,11 @@ const DetailSkeleton: React.FC = () => (
 export const DocumentDetailPage: React.FC = () => {
   const { id = '' } = useParams();
   const location = useLocation();
-  const { showToast } = useToast();
+  const { user } = useAuth();
+  const { refresh: refreshNotifications } = useNotifications();
   const [state, setState] = useState<DetailState>({ status: 'loading' });
   const [reloadToken, setReloadToken] = useState(0);
+  const [requestOpen, setRequestOpen] = useState(false);
 
   const catalogSearch = (location.state as DocumentDetailLocationState | null)?.catalogSearch ?? '';
   const catalogPath = `/catalogo${catalogSearch}`;
@@ -119,14 +126,25 @@ export const DocumentDetailPage: React.FC = () => {
   }, [id, reloadToken]);
 
   const doc = state.status === 'ready' ? state.doc : null;
-  const loanAction = useDocumentLoanAction(doc);
+  const { action: loanAction, refresh: refreshLoanAction } = useDocumentLoanAction(doc);
 
-  const requestLoan = () =>
-    showToast({
-      title: 'Solicitud de préstamo disponible en la Fase 3',
-      description: 'El botón se conectará con POST /api/v1/prestamos (RequestLoanModal).',
-      variant: 'info',
-    });
+  const requestLoan = () => setRequestOpen(true);
+
+  const handleGranted = useCallback(() => {
+    refreshLoanAction();
+    refreshNotifications();
+  }, [refreshLoanAction, refreshNotifications]);
+
+  /** 409 / 404: la obra pudo ser suspendida o ya existe un préstamo activo → se actualizan ficha y botón sin parpadeo */
+  const handleRejected = useCallback(() => {
+    refreshLoanAction();
+    catalogApi
+      .getById(id)
+      .then((fresh) => setState({ status: 'ready', doc: fresh }))
+      .catch((error: unknown) => {
+        if (error instanceof ApiHttpError && error.status === 404) setState({ status: 'not-found' });
+      });
+  }, [id, refreshLoanAction]);
 
   if (state.status === 'loading') {
     return (
@@ -306,6 +324,17 @@ export const DocumentDetailPage: React.FC = () => {
           </section>
         </aside>
       </div>
+
+      {user && (
+        <RequestLoanModal
+          open={requestOpen}
+          documento={ficha}
+          userName={user.nombre}
+          onClose={() => setRequestOpen(false)}
+          onGranted={handleGranted}
+          onRejected={handleRejected}
+        />
+      )}
     </div>
   );
 };
