@@ -68,42 +68,60 @@ frontend/
 
 ---
 
-## 3. Sistema de Diseño (Design System — Figma FAUD-UNSJ)
+## 3. Sistema de Diseño Oficial (Design System — Figma FAUD-UNSJ, Páginas 20 a 24)
 
-### 3.1. Paleta de Colores Institucional y Semántica
+### 3.1. Marca e Identidad (`01 MARCA E IDENTIDAD` — Figma pág. 21)
+- **Logotipo:** Emblema cuadrado Ámbar FAUD (`#FFB606`) con la inicial **`"R"`** en `Inter ExtraBold 800` (color `#1A1A2E`), acompañado del nombre **`Repositorio FAUD`** y subtítulo **`FAUD-UNSJ · Préstamo Digital Interdepartamental`** (o **`Biblioteca FAUD-UNSJ · Admin`** en el sidebar de administración).
 
-| Token / Uso | Color Hex | Clases Tailwind Referencia | Aplicación en Prototipos Figma |
+### 3.2. Paleta de Colores Institucional y Semántica (`02 PALETA DE COLORES` — Figma pág. 21)
+
+| Categoría | Token / Nombre en Figma | Color Hex | Aplicación en Prototipos Figma |
 | :--- | :--- | :--- | :--- |
-| **Primario Institucional (FAUD)** | `#1E3A8A` | `bg-blue-900`, `text-blue-900` | Encabezado principal, barra de navegación, botones primarios, identidad UNSJ. |
-| **Secundario / Superficie Oscura** | `#0F172A` | `bg-slate-900`, `text-slate-900` | Barra superior del Visor Protegido (Figma pág. 14), textos de alto contraste. |
-| **Acento Territorial / Académico** | `#2563EB` | `bg-blue-600`, `border-blue-600` | Enlaces activos, pestañas seleccionadas, filtros aplicados, foco de formularios. |
-| **Estado: Activo / Aprobado / Disponible** | `#16A34A` | `bg-green-50 text-green-700 border-green-200` | Badges `ACTIVO`, `APROBADO`, `Disponible para préstamo`. |
-| **Estado: Pendiente / Alerta 24h** | `#D97706` / `#F59E0B` | `bg-amber-50 text-amber-800 border-amber-300` | Badges `PENDIENTE`, alerta `"Por vencer (< 24h)"` (Figma págs. 8, 9 y 13). |
-| **Estado: Vencido / Revocado / Rechazado** | `#DC2626` | `bg-red-50 text-red-700 border-red-200` | Badges `REVOCADO`, `RECHAZADO`, pantalla de bloqueo `403 Forbidden`. |
-| **Estado: Cerrado / Historial** | `#475569` | `bg-slate-100 text-slate-700 border-slate-300` | Préstamos históricos en estado `VENCIDO` o `CERRADO`. |
-| **Fondo General de Aplicación** | `#F8FAFC` | `bg-slate-50` | Fondo limpio para lectura cómoda de fichas bibliográficas y tableros. |
+| **Primario** | **Ámbar FAUD (`Primary`)** | `#FFB606` | Botones primarios (`r:10px`, `h:48px`), acentos, pestañas activas, links destacados, acentos de esquina. |
+| **Secundario** | **Oro oscuro (`Secondary`)** | `#E6A303` | Hover, bordes activos, texto de botones secundarios outlined y tags. |
+| **Interacción** | **Oro hover** | `#FFCA28` | Estado hover de botones primarios e interacciones. |
+| **Fondos Oscuros** | **Navy profundo** | `#1A1A2E` / `#2D2D2D` | Hero principal (pág. 4), panel izquierdo split 50/50 (págs. 5–6), sidebar admin `240px` (págs. 7–9), navbar. |
+| **Gradientes / Activo** | **Navy medio** | `#16213E` | Ítem activo de sidebar admin, gradientes oscuros. |
+| **Visor / Acento** | **Azul arquitectónico** | `#0F3460` | Barra superior del Visor DRM (pág. 14), badge `Vigente · 5 días`. |
+| **Fondo General** | **Crema cálido** | `#FFF9EC` | Fondo principal de toda la aplicación. |
+| **Superficie** | **Blanco** | `#FFFFFF` | Tarjetas de catálogo, tablas, formularios y modales (`r:12px`). |
+| **Superficie Acento** | **Ámbar claro** | `#FFF3D0` | Tags de palabras clave (`r:16px`, `h:32px`), chips, encabezados suaves. |
+| **Bordes** | **Borde cálido** | `#E8DCC8` | Bordes de inputs (`r:8px`, `h:44px`), tarjetas, divisores y pestañas inactivas. |
+| **Texto** | **Principal / Secundario / Crema** | `#2D2D2D` / `#6B7280` / `#F5F0E1` | Títulos y body (`#2D2D2D`), subtítulos y labels (`#6B7280`), texto sobre fondo oscuro (`#F5F0E1`). |
+| **Estado: Éxito / Activo** | **Disponible / Activo** | Texto `#2D6A4F` · Bg `#E6F4EA` | Badges `Disponible`, `Activo · 5 días`, `Aprobado` (`r:15px`). |
+| **Estado: Alerta / Warning** | **Por vencer / Prestado** | Texto `#9A5B00` · Bg `#FFF4E0` | Badges `Por vencer · 1 día`, `Prestado`, `Alerta`, `Pendiente` (`r:15px`). |
+| **Estado: Error / Peligro** | **Revocar / Rechazar** | Texto `#B3261E` · Bg `#FDECEA` | Botón outlined `Revocar acceso`, `Rechazar`, errores `403 Forbidden`. |
+| **Estado: Inactivo** | **Vencido / Deshabilitado** | Texto `#6B7280` · Bg `#F1F1F1` | Badges `Vencido` y controles deshabilitados (`#E8DCC8` / `#9AA1AE`). |
 
-### 3.2. Tipografía e Iconografía
-- **Fuente principal:** `Inter` / `system-ui` (Sans-Serif de alta legibilidad en pantallas de datos y fichas académicas).
-- **Fuente monoespaciada:** `JetBrains Mono` / `monospace` para códigos de préstamo (`#1024`), contadores de tiempo (`06d 18h 42m`) y firmas de marca de agua.
-- **Iconografía:** `lucide-react` (iconos consistentes para escudo DRM, reloj de vigencia, ubicación departamental, archivo PDF y alertas).
+### 3.3. Tipografía, Layouts y Motivos Arquitectónicos (`03` a `07` — Figma págs. 3, 15, 22, 23 y 24)
+- **Familia tipográfica:** `Inter` (`Google Fonts`), pesos `400 Regular`, `500 Medium`, `600 SemiBold`, `700 Bold` y `800 ExtraBold` (reservado para el logotipo `R` y el H1 Hero de `48px`).
+- **Escala tipográfica:** `H1 Hero: 48px`, `H2 Página: 28px`, `H3 Sección: 20px`, `H4 Tarjeta: 16px`, `Body: 14px`, `Label: 13px`, `Caption: 12px`, `Overline: 11px (tracking 3px)`.
+- **Breakpoints y Layouts (Figma págs. 3, 15 y 24):**
+  - **Desktop (`1440 × 900`):** Margen lateral `80px`, contenido máximo `1280px`, Navbar superior `64px`, Sidebar Admin fijo izquierdo `240px`.
+  - **Mobile (`375 × 812`):** Margen lateral `20px`, Top bar `56px`, sin sidebar (menú hamburguesa).
+  - **Login / Registro (págs. 5 y 6):** Layout **Split 50/50** (panel izquierdo oscuro de marca + panel derecho `#FFF9EC` con formulario).
+- **Motivos decorativos arquitectónicos (Figma pág. 24):**
+  - **Grid de blueprint:** Patrón sutil de grilla `20px + 100px` que evoca planos arquitectónicos.
+  - **Acentos de esquina:** Líneas doradas (`#FFB606`) en esquinas de tarjetas y secciones hero.
+  - **Marca de agua DRM:** `"Ana Pérez · Préstamo #1024"`, diagonal `-20°` sobre el visor en tono dorado con `8% opacidad`.
 
 ---
 
-## 4. Mapa de Rutas, Roles y Trazabilidad con Figma
+## 4. Mapa de Rutas, Roles y Trazabilidad con Figma (Páginas 4 a 19)
 
 | Ruta SPA | Vista / Componente | Acceso / Guard | Pantalla Figma / Diagrama | Endpoints Backend Consumidos |
 | :--- | :--- | :--- | :--- | :--- |
-| `/` o `/catalogo` | `CatalogPage` | Público | **Figma pág. 11** (Buscador y Catálogo) | `GET /api/v1/documentos`, `GET /api/v1/departamentos`, `GET /api/v1/departamentos/metricas` |
-| `/documentos/:id` | `DocumentDetailPage` | Público (Acción requiere Auth) | **Figma pág. 12** (Ficha Bibliográfica) | `GET /api/v1/documentos/:id`, `POST /api/v1/prestamos` |
-| `/login` | `LoginPage` | Público (Solo no autenticados) | **Figma pág. 10** (Inicio de Sesión) | `POST /api/v1/auth/login`, `GET /api/v1/auth/profile` |
-| `/registro` | `RegisterPage` | Público (Solo no autenticados) | **Figma pág. 10** (Registro por Departamento) | `GET /api/v1/departamentos`, `POST /api/v1/auth/register` |
-| `/mis-prestamos` | `MyLoansPage` | `JwtAuthGuard` (`USUARIO` / `ADMIN`) | **Figma pág. 13** (Mis Préstamos y Vigencia) | `GET /api/v1/prestamos/mis-prestamos`, `PATCH /api/v1/prestamos/:id/cerrar` |
-| `/notificaciones` | `NotificationsPage` | `JwtAuthGuard` (`USUARIO` / `ADMIN`) | **Figma pág. 13** + **RF06** (Bandeja de Avisos) | `GET /api/v1/notificaciones`, `PATCH /api/v1/notificaciones/:id/leida`, `PATCH /api/v1/notificaciones/marcar-todas-leidas` |
-| `/visor/:prestamoId` | `ProtectedViewerPage` | `JwtAuthGuard` + Token DRM 7d | **Figma pág. 14** + **Figura 3** (Visor DRM) | `GET /api/v1/prestamos/:id/visor`, `GET /api/v1/documentos/:id/ver` (o `/prestamos/:id/contenido`) |
-| `/admin/usuarios` | `AdminUsersPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 8** (Validación de Usuarios) | `GET /api/v1/usuarios`, `PATCH /api/v1/usuarios/:id/estado`, `GET /api/v1/departamentos` |
-| `/admin/catalogo` | `AdminCatalogPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 7** (Carga y Gestión de PDFs) | `POST /api/v1/documentos`, `PATCH /api/v1/documentos/:id`, `DELETE /api/v1/documentos/:id` |
-| `/admin/prestamos` | `AdminLoansPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 9** (Monitor y Revocación DRM) | `GET /api/v1/prestamos`, `PATCH /api/v1/prestamos/:id/revocar`, `POST /api/v1/notificaciones/ejecutar-control-vigencia` |
+| `/` | `LandingPage` | Público | **Figma pág. 4 y 16** (Presentación / Hero Repositorio FAUD) | `GET /api/v1/health`, `GET /api/v1/departamentos/metricas` |
+| `/catalogo` | `CatalogPage` | Público | **Figma pág. 11 y 19** (Catálogo de documentos + Filtros) | `GET /api/v1/documentos`, `GET /api/v1/departamentos`, `GET /api/v1/departamentos/metricas` |
+| `/documentos/:id` | `DocumentDetailPage` | Público (Acción requiere Auth) | **Figma pág. 12 y 19** (Ficha Bibliográfica + ¿Cómo funciona?) | `GET /api/v1/documentos/:id`, `POST /api/v1/prestamos` |
+| `/login` | `LoginPage` | Público (Solo no autenticados) | **Figma pág. 5 y 16** (Iniciar sesión — Split 50/50) | `POST /api/v1/auth/login`, `GET /api/v1/auth/profile` |
+| `/registro` | `RegisterPage` | Público (Solo no autenticados) | **Figma pág. 6 y 16** (Crear cuenta — Split 50/50 + 19 Deptos) | `GET /api/v1/departamentos`, `POST /api/v1/auth/register` |
+| `/mis-prestamos` | `MyLoansPage` | `JwtAuthGuard` (`USUARIO` / `ADMIN`) | **Figma pág. 13 y 19** (Mis préstamos y Vigencia) | `GET /api/v1/prestamos/mis-prestamos`, `PATCH /api/v1/prestamos/:id/cerrar` |
+| `/notificaciones` | `NotificationsPage` | `JwtAuthGuard` (`USUARIO` / `ADMIN`) | **Figma pág. 13** + **RF06** (Bandeja de Avisos 24h) | `GET /api/v1/notificaciones`, `PATCH /api/v1/notificaciones/:id/leida`, `PATCH /api/v1/notificaciones/marcar-todas-leidas` |
+| `/visor/:prestamoId` | `ProtectedViewerPage` | `JwtAuthGuard` + Token DRM 7d | **Figma pág. 14 y 19** + **Figura 3** (Visor DRM) | `GET /api/v1/prestamos/:id/visor`, `GET /api/v1/documentos/:id/ver` (o `/prestamos/:id/contenido`) |
+| `/admin/catalogo` | `AdminCatalogPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 7 y 16** (Sidebar 240px + Cargar documento) | `POST /api/v1/documentos`, `PATCH /api/v1/documentos/:id`, `DELETE /api/v1/documentos/:id` |
+| `/admin/usuarios` | `AdminUsersPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 8 y 17** (Sidebar 240px + Validación de Usuarios) | `GET /api/v1/usuarios`, `PATCH /api/v1/usuarios/:id/estado`, `GET /api/v1/departamentos` |
+| `/admin/prestamos` | `AdminLoansPage` | `RoleGuard(ADMINISTRADOR)` | **Figma pág. 9 y 17** (Sidebar 240px + Control y Revocación) | `GET /api/v1/prestamos`, `PATCH /api/v1/prestamos/:id/revocar`, `POST /api/v1/notificaciones/ejecutar-control-vigencia` |
 
 ---
 

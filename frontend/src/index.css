@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', Arial, Helvetica, sans-serif;
+  }
+
+  body {
+    background-color: #fff9ec;
+    color: #2d2d2d;
+    @apply min-h-screen antialiased;
+  }
+
+  ::selection {
+    background-color: #ffb606;
+    color: #1a1a2e;
+  }
+}
+
+@layer components {
+  /* Campos de entrada (Figma pág. 23): borde #E8DCC8 · r:8 · focus borde #FFB606 stroke 2 */
+  .field-input {
+    @apply w-full h-11 px-4 rounded-input bg-white border border-faud-border-warm text-body text-faud-text placeholder:text-faud-muted transition-colors focus:outline-none focus:border-faud-amber focus:ring-1 focus:ring-faud-amber;
+  }
+
+  .field-label {
+    @apply block text-label text-faud-text mb-2;
+  }
+
+  /* Tablas de datos (header #FFF3D0 · texto #9A5B00) */
+  .table-head {
+    @apply bg-faud-amber-light text-caption font-bold text-status-warning;
+  }
+}
+
+/* 07 MOTIVOS DECORATIVOS ARQUITECTÓNICOS — Figma pág. 24 */
+@layer utilities {
+  /* Grid de blueprint: patrón sutil de grilla 20px + 100px */
+  .bg-blueprint-dark {
+    background-image:
+      linear-gradient(to right, rgba(255, 182, 6, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 182, 6, 0.06) 1px, transparent 1px),
+      linear-gradient(to right, rgba(255, 182, 6, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 182, 6, 0.02) 1px, transparent 1px);
+    background-size:
+      100px 100px,
+      100px 100px,
+      20px 20px,
+      20px 20px;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Protección antidescarga / antiimpresión del Visor Protegido (RNF02) */
+.drm-protected-view {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media print {
+  .drm-protected-view,
+  .drm-protected-view * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

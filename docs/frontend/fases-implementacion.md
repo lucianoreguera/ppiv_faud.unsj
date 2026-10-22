@@ -20,7 +20,7 @@ flowchart LR
 
 ---
 
-## Fase 0: Inicialización de la SPA, Design System (Figma) y Cliente HTTP Tipado
+## Fase 0: Inicialización de la SPA, Design System (Figma) y Cliente HTTP Tipado (Completada ✅)
 **Objetivo:** Dejar operativo el esqueleto del proyecto React + Vite + TypeScript en `frontend/` gestionado con **`pnpm`**, con Tailwind CSS configurado según la paleta institucional FAUD-UNSJ, contratos TypeScript alineados con `openapi.json`, cliente HTTP con interceptores y Layout base navegable.
 
 - **Entregables técnicos:**
@@ -31,7 +31,7 @@ flowchart LR
   - Cliente HTTP centralizado (`src/api/http-client.ts`) con inyección automática de `Authorization: Bearer <token>`, soporte para `x-drm-token`, manejo tipado de errores (`401`, `403`, `409`, `429 Retry-After`) y servicio de notificaciones visuales (`ToastContext`).
   - Layout institucional (`Navbar`, `Footer`, indicador de estado de conexión con `GET /api/v1/health`) y esqueleto de rutas con `react-router-dom`.
 - **Criterio de validación:** `pnpm run build` y `pnpm run test` en verde; SPA levantando en `http://localhost:5173` y verificando conectividad en vivo con el Backend (`GET /api/v1/health`).
-- **Documento de seguimiento:** `docs/frontend/fase-00-inicializacion-y-design-system.md`.
+- **Documento de seguimiento:** [`docs/frontend/fase-00-inicializacion-y-design-system.md`](file:///c:/Users/Operador/Documents/Luciano/projects/TDS/PPI_IV/docs/frontend/fase-00-inicializacion-y-design-system.md).
 
 ---
 
