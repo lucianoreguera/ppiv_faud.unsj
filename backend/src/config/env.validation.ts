@@ -1,5 +1,6 @@
 import { plainToInstance, Type } from 'class-transformer';
 import {
+  IsBooleanString,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -7,6 +8,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateIf,
   validateSync,
 } from 'class-validator';
 
@@ -15,6 +17,14 @@ export enum Environment {
   Production = 'production',
   Test = 'test',
 }
+
+export enum StorageDriver {
+  Local = 'local',
+  S3 = 's3',
+}
+
+const usesS3Storage = (env: EnvironmentVariables) =>
+  env.STORAGE_DRIVER === StorageDriver.S3;
 
 export class EnvironmentVariables {
   @IsEnum(Environment)
@@ -54,9 +64,39 @@ export class EnvironmentVariables {
   @IsOptional()
   LOAN_DURATION_DAYS: number = 7;
 
+  @IsEnum(StorageDriver)
+  @IsOptional()
+  STORAGE_DRIVER: StorageDriver = StorageDriver.Local;
+
   @IsString()
   @IsOptional()
   PRIVATE_STORAGE_DIR: string = './storage/pdfs';
+
+  // Bucket privado compatible con S3 (Backblaze B2, Cloudflare R2, MinIO) — obligatorio con STORAGE_DRIVER=s3
+  @ValidateIf(usesS3Storage)
+  @IsString()
+  @IsNotEmpty()
+  S3_ENDPOINT?: string;
+
+  @ValidateIf(usesS3Storage)
+  @IsString()
+  @IsNotEmpty()
+  S3_REGION?: string;
+
+  @ValidateIf(usesS3Storage)
+  @IsString()
+  @IsNotEmpty()
+  S3_BUCKET?: string;
+
+  @ValidateIf(usesS3Storage)
+  @IsString()
+  @IsNotEmpty()
+  S3_ACCESS_KEY_ID?: string;
+
+  @ValidateIf(usesS3Storage)
+  @IsString()
+  @IsNotEmpty()
+  S3_SECRET_ACCESS_KEY?: string;
 
   @Type(() => Number)
   @IsInt()
@@ -79,6 +119,19 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SMTP_FROM: string = 'Biblioteca FAUD-UNSJ <biblioteca@faud.unsj.edu.ar>';
+
+  // Credenciales SMTP: vacías con Mailpit; obligatorias en proveedores externos (Brevo, Mailtrap)
+  @IsString()
+  @IsOptional()
+  SMTP_USER?: string;
+
+  @IsString()
+  @IsOptional()
+  SMTP_PASS?: string;
+
+  @IsBooleanString()
+  @IsOptional()
+  SMTP_SECURE: string = 'false';
 
   @Type(() => Number)
   @IsInt()

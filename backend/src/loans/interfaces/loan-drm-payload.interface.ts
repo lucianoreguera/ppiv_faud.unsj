@@ -41,7 +41,6 @@ export interface ValidatedDrmAccess {
   documentoTipo: TipoDocumento;
   documentoAnio: number;
   archivoUrl: string;
-  absolutePdfPath: string;
   fechaInicio: Date;
   fechaVencimiento: Date;
   diasRestantes: number;

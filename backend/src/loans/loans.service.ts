@@ -18,9 +18,9 @@ import {
   TipoDocumento,
   TipoNotificacion,
 } from '@prisma/client';
-import { promises as fs } from 'fs';
 import { CatalogService } from '../catalog/catalog.service';
 import { PdfStorageService } from '../catalog/pdf-storage.service';
+import { PdfReadStream } from '../catalog/storage/pdf-storage-driver.interface';
 import {
   AuthenticatedUser,
   JwtPayload,
@@ -835,6 +835,21 @@ export class LoansService {
   }
 
   /**
+   * Abre el stream del PDF privado de un acceso DRM ya validado (disco local o bucket S3).
+   */
+  async openProtectedPdf(access: ValidatedDrmAccess): Promise<PdfReadStream> {
+    const pdf = await this.pdfStorageService.openPdf(access.archivoUrl);
+
+    if (!pdf) {
+      throw new NotFoundException(
+        `El archivo PDF privado asociado al documento "${access.documentoTitulo}" no se encuentra en el almacenamiento seguro.`,
+      );
+    }
+
+    return pdf;
+  }
+
+  /**
    * Devuelve los metadatos completos para construir la interfaz del Visor Protegido (Figma pág. 14):
    * marca de agua dinámica, cuenta regresiva, banderas de bloqueo de descarga/impresión y URLs de stream.
    */
@@ -1142,14 +1157,11 @@ export class LoansService {
       );
     }
 
-    const absolutePdfPath = this.pdfStorageService.resolveSafeFilePath(
+    // Garantizamos que el archivo exista en el almacenamiento privado
+    const pdfExiste = await this.pdfStorageService.pdfExists(
       prestamo.documento.archivoUrl,
     );
-
-    // Garantizamos que el archivo exista en el almacenamiento privado
-    try {
-      await fs.access(absolutePdfPath);
-    } catch {
+    if (!pdfExiste) {
       throw new NotFoundException(
         `El archivo PDF privado asociado al documento "${prestamo.documento.titulo}" no se encuentra en el almacenamiento seguro.`,
       );
@@ -1176,7 +1188,6 @@ export class LoansService {
       documentoTipo: prestamo.documento.tipo,
       documentoAnio: prestamo.documento.anio,
       archivoUrl: prestamo.documento.archivoUrl,
-      absolutePdfPath,
       fechaInicio: prestamo.fechaInicio,
       fechaVencimiento: prestamo.fechaVencimiento,
       diasRestantes: timing.diasRestantes,

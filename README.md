@@ -91,3 +91,4 @@ cd frontend && pnpm run test && pnpm run build      # Vitest + build de producci
 - Fases del Backend: [`docs/backend/fases-implementacion.md`](docs/backend/fases-implementacion.md)
 - Fases del Frontend: [`docs/frontend/fases-implementacion.md`](docs/frontend/fases-implementacion.md)
 - Cierre del Frontend y trazabilidad RF/RNF: [`docs/frontend/fase-06-pruebas-integrales-y-cierre.md`](docs/frontend/fase-06-pruebas-integrales-y-cierre.md)
+- Despliegue de demostración (Vercel + Render + Neon + Backblaze B2): [`docs/despliegue-demo.md`](docs/despliegue-demo.md)

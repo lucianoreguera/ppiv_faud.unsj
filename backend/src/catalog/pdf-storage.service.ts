@@ -6,8 +6,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import { promises as fs } from 'fs';
 import * as path from 'path';
+import { LocalPdfStorageDriver } from './storage/local-pdf-storage.driver';
+import {
+  PdfReadStream,
+  PdfStorageDriver,
+} from './storage/pdf-storage-driver.interface';
+import { S3PdfStorageDriver } from './storage/s3-pdf-storage.driver';
 
 export interface SavedPdfResult {
   relativePath: string;
@@ -45,16 +50,12 @@ const SEED_SAMPLE_PDFS = [
 @Injectable()
 export class PdfStorageService implements OnModuleInit {
   private readonly logger = new Logger(PdfStorageService.name);
-  private readonly storageDirAbs: string;
+  private readonly driver: PdfStorageDriver;
   private readonly maxPdfSizeBytes: number;
   private readonly maxPdfSizeMb: number;
 
   constructor(private readonly configService: ConfigService) {
-    const configuredDir = this.configService.get<string>(
-      'storage.privateDir',
-      './storage/pdfs',
-    );
-    this.storageDirAbs = path.resolve(process.cwd(), configuredDir);
+    this.driver = this.createDriver();
     this.maxPdfSizeMb = this.configService.get<number>(
       'storage.maxPdfSizeMb',
       50,
@@ -63,32 +64,62 @@ export class PdfStorageService implements OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureStorageDirectory();
+    if (this.driver instanceof LocalPdfStorageDriver) {
+      await this.driver.ensureDirectory();
+    }
     await this.ensureSeedSamplePdfs();
   }
 
   /**
-   * Garantiza que el directorio privado de PDFs exista fuera de cualquier ruta pública estática.
+   * Selecciona el backend de almacenamiento según `STORAGE_DRIVER`:
+   * `local` (disco privado, por defecto) o `s3` (bucket privado compatible con S3, p. ej. Backblaze B2).
    */
-  async ensureStorageDirectory(): Promise<void> {
-    await fs.mkdir(this.storageDirAbs, { recursive: true });
+  private createDriver(): PdfStorageDriver {
+    const driverName = this.configService.get<string>(
+      'storage.driver',
+      'local',
+    );
+
+    if (driverName === 's3') {
+      this.logger.log('Almacenamiento privado de PDFs: bucket S3 compatible');
+      return new S3PdfStorageDriver({
+        endpoint: this.configService.get<string>('storage.s3.endpoint', ''),
+        region: this.configService.get<string>('storage.s3.region', ''),
+        bucket: this.configService.get<string>('storage.s3.bucket', ''),
+        accessKeyId: this.configService.get<string>(
+          'storage.s3.accessKeyId',
+          '',
+        ),
+        secretAccessKey: this.configService.get<string>(
+          'storage.s3.secretAccessKey',
+          '',
+        ),
+      });
+    }
+
+    const configuredDir = this.configService.get<string>(
+      'storage.privateDir',
+      './storage/pdfs',
+    );
+    return new LocalPdfStorageDriver(
+      path.resolve(process.cwd(), configuredDir),
+    );
   }
 
   /**
-   * Genera archivos PDF válidos para los 4 documentos iniciales del seed si aún no existen en disco,
+   * Genera archivos PDF válidos para los 4 documentos iniciales del seed si aún no existen en el almacenamiento,
    * garantizando que en Fase 4 puedan transmitirse en el visor protegido.
    */
   async ensureSeedSamplePdfs(): Promise<void> {
     for (const sample of SEED_SAMPLE_PDFS) {
-      const targetPath = path.join(this.storageDirAbs, sample.fileName);
-      const exists = await this.pathExists(targetPath);
+      const exists = await this.driver.exists(sample.fileName);
       if (!exists) {
         const buffer = PdfStorageService.buildSamplePdfBuffer(
           sample.titulo,
           sample.autor,
           sample.anio,
         );
-        await fs.writeFile(targetPath, buffer);
+        await this.driver.save(sample.fileName, buffer);
       }
     }
   }
@@ -134,21 +165,11 @@ export class PdfStorageService implements OnModuleInit {
       );
     }
 
-    await this.ensureStorageDirectory();
-
     const safeSlug = this.slugify(tituloReferencia || file.originalname);
     const shortId = randomUUID().split('-')[0];
     const fileName = `${Date.now()}-${shortId}-${safeSlug}.pdf`;
-    const fullPath = path.join(this.storageDirAbs, fileName);
 
-    // Defensa contra Path Traversal
-    if (!fullPath.startsWith(this.storageDirAbs)) {
-      throw new BadRequestException(
-        'Ruta de almacenamiento inválida detectada.',
-      );
-    }
-
-    await fs.writeFile(fullPath, file.buffer);
+    await this.driver.save(fileName, file.buffer);
     this.logger.log(
       `PDF almacenado de forma privada: ${fileName} (${file.size} bytes)`,
     );
@@ -161,32 +182,30 @@ export class PdfStorageService implements OnModuleInit {
   }
 
   /**
-   * Resuelve de forma segura la ruta absoluta de un PDF almacenado en el directorio privado.
+   * Indica si el PDF referenciado por `archivoUrl` existe en el almacenamiento privado.
    */
-  resolveSafeFilePath(relativePath: string): string {
-    const fileName = path.basename(relativePath);
-    const resolved = path.resolve(this.storageDirAbs, fileName);
-
-    if (!resolved.startsWith(this.storageDirAbs)) {
-      throw new BadRequestException(
-        'Acceso a ruta fuera del directorio privado.',
-      );
-    }
-
-    return resolved;
+  async pdfExists(relativePath: string): Promise<boolean> {
+    return this.driver.exists(path.basename(relativePath));
   }
 
   /**
-   * Elimina un archivo PDF del almacenamiento privado si existe en disco.
+   * Abre el PDF referenciado por `archivoUrl` como stream de lectura, o `null` si no existe.
+   */
+  async openPdf(relativePath: string): Promise<PdfReadStream | null> {
+    return this.driver.open(path.basename(relativePath));
+  }
+
+  /**
+   * Elimina un archivo PDF del almacenamiento privado si existe.
    */
   async deletePdfIfExists(relativePath: string): Promise<void> {
     try {
-      const fullPath = this.resolveSafeFilePath(relativePath);
-      const exists = await this.pathExists(fullPath);
+      const fileName = path.basename(relativePath);
+      const exists = await this.driver.exists(fileName);
       if (exists) {
-        await fs.unlink(fullPath);
+        await this.driver.delete(fileName);
         this.logger.log(
-          `PDF eliminado del almacenamiento privado: ${fullPath}`,
+          `PDF eliminado del almacenamiento privado: ${fileName}`,
         );
       }
     } catch (error) {
@@ -263,15 +282,6 @@ ${350 + contentStream.length}
 `;
 
     return Buffer.from(pdfContent, 'utf-8');
-  }
-
-  private async pathExists(targetPath: string): Promise<boolean> {
-    try {
-      await fs.access(targetPath);
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   private slugify(input: string): string {

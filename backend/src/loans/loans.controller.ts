@@ -330,7 +330,8 @@ export class LoansController {
       id,
       rawToken,
     );
-    return buildProtectedPdfStream(res, access);
+    const pdf = await this.loansService.openProtectedPdf(access);
+    return buildProtectedPdfStream(res, access, pdf);
   }
 }
 
@@ -392,6 +393,7 @@ export class DocumentViewerController {
       id,
       rawToken,
     );
-    return buildProtectedPdfStream(res, access);
+    const pdf = await this.loansService.openProtectedPdf(access);
+    return buildProtectedPdfStream(res, access, pdf);
   }
 }

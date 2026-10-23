@@ -1,6 +1,6 @@
 import { StreamableFile } from '@nestjs/common';
 import { Response } from 'express';
-import { createReadStream, promises as fs } from 'fs';
+import { PdfReadStream } from '../catalog/storage/pdf-storage-driver.interface';
 import { ValidatedDrmAccess } from './interfaces/loan-drm-payload.interface';
 
 /**
@@ -40,17 +40,17 @@ export function extractDrmTokenFromRequest(
  * Configura los encabezados de seguridad DRM Temporal (RF04 / RNF02 / Figma pág. 14)
  * y retorna el `StreamableFile` del PDF almacenado en forma privada.
  */
-export async function buildProtectedPdfStream(
+export function buildProtectedPdfStream(
   res: Response,
   access: ValidatedDrmAccess,
-): Promise<StreamableFile> {
-  const stats = await fs.stat(access.absolutePdfPath);
+  pdf: PdfReadStream,
+): StreamableFile {
   const inlineFileName = `faud-unsj-prestamo-${access.codigoReferencia}.pdf`;
   const safeWatermark = toSafeHeaderValue(access.marcaAgua);
 
   res.set({
     'Content-Type': 'application/pdf',
-    'Content-Length': String(stats.size),
+    'Content-Length': String(pdf.sizeBytes),
     'Content-Disposition': `inline; filename="${inlineFileName}"`,
     'Cache-Control':
       'no-store, no-cache, must-revalidate, proxy-revalidate, private, max-age=0',
@@ -87,6 +87,5 @@ export async function buildProtectedPdfStream(
     ].join(', '),
   });
 
-  const fileStream = createReadStream(access.absolutePdfPath);
-  return new StreamableFile(fileStream);
+  return new StreamableFile(pdf.stream);
 }

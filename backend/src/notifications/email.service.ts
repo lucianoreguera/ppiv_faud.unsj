@@ -31,11 +31,17 @@ export class EmailService {
       'Biblioteca FAUD-UNSJ <biblioteca@faud.unsj.edu.ar>',
     );
 
+    // Sin credenciales (Mailpit local) se omite TLS; con credenciales (Brevo, Mailtrap) se autentica sobre TLS/STARTTLS
+    const smtpUser = this.configService.get<string>('smtp.user');
+    const smtpPass = this.configService.get<string>('smtp.pass');
+    const hasCredentials = Boolean(smtpUser && smtpPass);
+
     this.transporter = nodemailer.createTransport({
       host: this.smtpHost,
       port: this.smtpPort,
-      secure: false,
-      ignoreTLS: true,
+      secure: this.configService.get<boolean>('smtp.secure', false),
+      ignoreTLS: !hasCredentials,
+      auth: hasCredentials ? { user: smtpUser, pass: smtpPass } : undefined,
       connectionTimeout: 3000,
       greetingTimeout: 3000,
       socketTimeout: 5000,

@@ -13,11 +13,11 @@ import {
   RolUsuario,
   TipoDocumento,
 } from '@prisma/client';
-import * as path from 'path';
 import { CatalogService } from '../catalog/catalog.service';
 import { PdfStorageService } from '../catalog/pdf-storage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractDrmTokenFromRequest } from './drm-stream.util';
+import { ValidatedDrmAccess } from './interfaces/loan-drm-payload.interface';
 import { LoanStateMachine } from './loan-state-machine';
 import { LoansService } from './loans.service';
 
@@ -53,7 +53,8 @@ describe('LoansService & LoanStateMachine (Fase 4 - RF03, RF04, RNF02)', () => {
   };
 
   const mockPdfStorageService = {
-    resolveSafeFilePath: jest.fn(),
+    pdfExists: jest.fn(),
+    openPdf: jest.fn(),
   };
 
   const mockConfigService = {
@@ -480,11 +481,7 @@ describe('LoansService & LoanStateMachine (Fase 4 - RF03, RF04, RNF02)', () => {
         documento: sampleDoc,
       });
 
-      const realSamplePdf = path.resolve(
-        process.cwd(),
-        'storage/pdfs/vivienda-social-cuyo-2021.pdf',
-      );
-      mockPdfStorageService.resolveSafeFilePath.mockReturnValue(realSamplePdf);
+      mockPdfStorageService.pdfExists.mockResolvedValue(true);
 
       const access = await loansService.validateDrmAccessByDocument(
         sampleDoc.id,
@@ -494,6 +491,20 @@ describe('LoansService & LoanStateMachine (Fase 4 - RF03, RF04, RNF02)', () => {
       expect(access.prestamoId).toBe('prestamo-vigente-uuid');
       expect(access.marcaAgua).toBe('Ana Pérez · Préstamo #1024');
       expect(access.diasRestantes).toBeGreaterThanOrEqual(6);
+      expect(mockPdfStorageService.pdfExists).toHaveBeenCalledWith(
+        sampleDoc.archivoUrl,
+      );
+    });
+
+    it('openProtectedPdf() debe lanzar NotFoundException cuando el PDF ya no está en el almacenamiento privado', async () => {
+      mockPdfStorageService.openPdf.mockResolvedValue(null);
+
+      await expect(
+        loansService.openProtectedPdf({
+          archivoUrl: 'storage/pdfs/inexistente.pdf',
+          documentoTitulo: 'Documento sin archivo',
+        } as ValidatedDrmAccess),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('validarVigencia() debe retornar true sin modificar estado cuando el préstamo está ACTIVO y fechaVencimiento > now()', async () => {

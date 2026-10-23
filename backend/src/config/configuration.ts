@@ -14,12 +14,23 @@ export default () => ({
     loanDurationDays: parseInt(process.env.LOAN_DURATION_DAYS ?? '7', 10),
   },
   storage: {
+    driver: process.env.STORAGE_DRIVER ?? 'local',
     privateDir: process.env.PRIVATE_STORAGE_DIR ?? './storage/pdfs',
     maxPdfSizeMb: parseInt(process.env.MAX_PDF_SIZE_MB ?? '50', 10),
+    s3: {
+      endpoint: process.env.S3_ENDPOINT,
+      region: process.env.S3_REGION,
+      bucket: process.env.S3_BUCKET,
+      accessKeyId: process.env.S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    },
   },
   smtp: {
     host: process.env.SMTP_HOST ?? 'localhost',
     port: parseInt(process.env.SMTP_PORT ?? '1025', 10),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    secure: process.env.SMTP_SECURE === 'true',
     from:
       process.env.SMTP_FROM ??
       'Biblioteca FAUD-UNSJ <biblioteca@faud.unsj.edu.ar>',
